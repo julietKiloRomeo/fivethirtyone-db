@@ -1,5 +1,6 @@
 import pandas as pd
 from mysql.connector import connect, Error
+import os
 from contextlib import contextmanager
 
 
@@ -97,15 +98,17 @@ def import_csv_into_db(csv_path="drive/MyDrive/lifts.csv"):
         conn.commit()
 
 
-def all_sets(athlete):
-    show_table_query = f"SELECT * FROM workset where athlete_name='{athlete}'"
+def all_sets(athlete=None):
+    if athlete:
+        show_table_query = f"SELECT * FROM workset where athlete_name='{athlete}'"
+    else:
+        show_table_query = f"SELECT * FROM workset"
+
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(show_table_query)
         # Fetch rows from last executed query
-        result = cursor.fetchall()
-        for row in result:
-            print(row)
+        return cursor.fetchall()
 
 def delete_workset_by_id(ws_id):
     with db_connection() as conn:

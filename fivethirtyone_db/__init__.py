@@ -1,3 +1,6 @@
+import pandas as pd
+from io import StringIO
+
 csv_program_5 = """
 pct,reps
 40,5
@@ -34,7 +37,15 @@ pct,reps
 50,5
 40,5
 """
+
 SMALLEST_W_INC = 2.5
+
+programs = dict(
+    five = pd.read_csv(StringIO(csv_program_5),
+    three = pd.read_csv(StringIO(csv_program_3),
+    one = pd.read_csv(StringIO(csv_program_1),
+    off = pd.read_csv(StringIO(csv_program_off),
+}
 
 
 comments = dict(
