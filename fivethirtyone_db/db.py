@@ -1,5 +1,5 @@
 import pandas as pd
-from mysql.connector import connect
+from mysql.connector import connect, Error
 from contextlib import contextmanager
 
 
