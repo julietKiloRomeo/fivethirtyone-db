@@ -41,12 +41,11 @@ pct,reps
 SMALLEST_W_INC = 2.5
 
 programs = dict(
-    five = pd.read_csv(StringIO(csv_program_5),
-    three = pd.read_csv(StringIO(csv_program_3),
-    one = pd.read_csv(StringIO(csv_program_1),
-    off = pd.read_csv(StringIO(csv_program_off),
+    five = pd.read_csv(StringIO(csv_program_5)),
+    three = pd.read_csv(StringIO(csv_program_3)),
+    one = pd.read_csv(StringIO(csv_program_1)),
+    off = pd.read_csv(StringIO(csv_program_off)),
 )
-
 
 comments = dict(
     squat="rack @ 17, safetybar @ 3",
