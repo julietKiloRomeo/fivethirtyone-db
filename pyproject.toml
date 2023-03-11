@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "fivethirtyone-db"
+version = "0.1.0"
+description = ""
+authors = ["jkr <jimmy.kjaersgaard@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "fivethirtyone_db"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
