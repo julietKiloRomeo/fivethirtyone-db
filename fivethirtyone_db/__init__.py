@@ -45,7 +45,7 @@ programs = dict(
     three = pd.read_csv(StringIO(csv_program_3),
     one = pd.read_csv(StringIO(csv_program_1),
     off = pd.read_csv(StringIO(csv_program_off),
-}
+)
 
 
 comments = dict(
