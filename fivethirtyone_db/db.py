@@ -108,7 +108,7 @@ def all_sets(athlete=None):
         cursor = conn.cursor()
         cursor.execute(show_table_query)
         # Fetch rows from last executed query
-        return cursor.fetchall()
+        return cursor.column_names, cursor.fetchall()
 
 def delete_workset_by_id(ws_id):
     with db_connection() as conn:
