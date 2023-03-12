@@ -1,4 +1,5 @@
 import numpy as np
+from . import to_add_pr_cycle
 
 def one_rm_brzycki(weight, reps):
     """calculate 1rm max from several reps
@@ -50,7 +51,7 @@ def iso_fusion(w_1):
     return n, 2 * w_1 / (n**0.1 + 36 / (37 - n))
 
 
-def compile(lifter, exercise, lifts, program, cycle=0):
+def compile(athlete, lift, worksets, program, cycle=0):
     """given previous lifts and a base-program
     calculate a program for a specific lifter and
     exercise
@@ -61,12 +62,13 @@ def compile(lifter, exercise, lifts, program, cycle=0):
     program (dataframe): 
 
     """
+    
     train_max = (
-        lifts.query(f'lifter == "{lifter}" and lift == "{exercise}" and is_max')
+        worksets.query(f'athlete_name == "{athlete_name}" and lift_name == "{lift}" and is_max')
         .sort_values("date")
         .iloc[-1]["train_max"]
     )
-    train_max += to_add_pr_cycle[exercise] * cycle
+    train_max += to_add_pr_cycle[lift] * cycle
 
     weight = (
         ((program["pct"] / 100 * train_max) // SMALLEST_W_INC) * SMALLEST_W_INC
