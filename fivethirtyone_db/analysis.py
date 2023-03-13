@@ -64,7 +64,7 @@ def compile(athlete, lift, worksets, program, cycle=0):
     """
     
     train_max = (
-        worksets.query(f'athlete_name == "{athlete_name}" and lift_name == "{lift}" and is_max')
+        worksets.query(f'athlete_name == "{athlete}" and lift_name == "{lift}" and is_max')
         .sort_values("date")
         .iloc[-1]["train_max"]
     )

@@ -1,5 +1,19 @@
 import pandas as pd
 from io import StringIO
+import os
+from dotenv import load_dotenv
+import pathlib
+
+
+print(pathlib.Path(__file__).parent.parent / "vars.env")
+load_dotenv(pathlib.Path(__file__).parent.parent / "vars.env")
+
+_credentials = dict(
+    host=os.getenv("HOST"),
+    user=os.getenv("USERNAME"),
+    password=os.getenv("PASSWORD"),
+    database=os.getenv("DATABASE"),
+)
 
 csv_program_5 = """
 pct,reps

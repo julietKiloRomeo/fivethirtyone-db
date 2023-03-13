@@ -1,7 +1,8 @@
 import pandas as pd
 from mysql.connector import connect, Error
-import os
+from . import _credentials
 from contextlib import contextmanager
+
 
 
 CREATE_LIFT = """CREATE TABLE lift (
@@ -24,7 +25,6 @@ CREATE_WORKSET = """CREATE TABLE workset (
   KEY athlete_name_idx (athlete_name)
 );"""
 
-
 @contextmanager
 def db_connection():
     """
@@ -43,16 +43,11 @@ def db_connection():
         conn.commit()
     """
     try:
-        with connect(
-            host=os.getenv("HOST"),
-            user=os.getenv("USERNAME"),
-            password=os.getenv("PASSWORD"),
-            database=os.getenv("DATABASE"),
-        ) as connection:
+        with connect(**_credentials) as connection:
             yield connection
     except Error as e:
-        print(e)
-
+#        print(e)
+        raise
 
 # csv into DB
 def import_csv_into_db(csv_path="drive/MyDrive/lifts.csv"):
