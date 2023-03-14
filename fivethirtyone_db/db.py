@@ -20,6 +20,7 @@ CREATE_WORKSET = """CREATE TABLE workset (
   lift_name varchar(31),
   athlete_name varchar(31),
   date date,
+  is_max boolean,
 	UNIQUE KEY `uc_set` (`lift_name`, `athlete_name`, `date`),
   KEY lift_name_idx (lift_name),
   KEY athlete_name_idx (athlete_name)
@@ -50,7 +51,7 @@ def db_connection():
         raise
 
 # csv into DB
-def import_csv_into_db(csv_path="drive/MyDrive/lifts.csv"):
+def import_csv_into_db(csv_path="lifts.csv"):
     """import csv directly into worksets
 
         csv must be in the following format:
@@ -63,7 +64,7 @@ def import_csv_into_db(csv_path="drive/MyDrive/lifts.csv"):
         existing data are deleted!
 
     """
-
+    print(_credentials)
     df = pd.read_csv(csv_path)
 
     name_map = {
@@ -76,12 +77,12 @@ def import_csv_into_db(csv_path="drive/MyDrive/lifts.csv"):
     df = df.assign(db_name=[name_map[n] for n in df["lifter"]]).query(
         "not lifter=='alvi'"
     )
-    recs = [(*prec, int(reps), name) for _, _, *prec, reps, _, name in df.to_records()]
+    recs = [(*prec, int(reps), bool(is_max), name) for _, _, *prec, reps, is_max, name in df.to_records()]
 
     insert_worksets = """
       INSERT INTO workset
-      (date, lift_name, weight, reps, athlete_name)
-      VALUES ( %s, %s, %s, %s, %s )"""
+      (date, lift_name, weight, reps, is_max, athlete_name)
+      VALUES ( %s, %s, %s, %s, %s, %s )"""
 
     with db_connection() as conn:
         cursor = conn.cursor()

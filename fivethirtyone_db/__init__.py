@@ -9,9 +9,9 @@ print(pathlib.Path(__file__).parent.parent / "vars.env")
 load_dotenv(pathlib.Path(__file__).parent.parent / "vars.env")
 
 _credentials = dict(
-    host=os.getenv("HOST"),
-    user=os.getenv("USERNAME"),
-    password=os.getenv("PASSWORD"),
+    host=os.getenv("DBHOST"),
+    user=os.getenv("DBUSERNAME"),
+    password=os.getenv("DBPASSWORD"),
     database=os.getenv("DATABASE"),
 )
 
