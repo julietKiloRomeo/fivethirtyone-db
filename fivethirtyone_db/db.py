@@ -95,6 +95,14 @@ def import_csv_into_db(csv_path="lifts.csv"):
 
 
 def all_sets(athlete=None):
+    """return all rows in the workset table
+
+    Args:
+        athlete (str): optional name of athlete
+
+    Returns:
+        (tuple[str]), list[tuple]): column names, row-records (ws_id, weight, reps, lift, name, date, is_max)
+    """
     if athlete:
         show_table_query = f"SELECT * FROM workset where athlete_name='{athlete}'"
     else:
@@ -107,6 +115,11 @@ def all_sets(athlete=None):
         return cursor.column_names, cursor.fetchall()
 
 def delete_workset_by_id(ws_id):
+    """delete a row in the workset table
+
+    Args:
+        ws_id (int): row id for the workset table
+    """
     with db_connection() as conn:
         cursor = conn.cursor()
         # delete everything
