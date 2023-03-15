@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{include = "fivethirtyone_db"}]
 
 [tool.poetry.scripts]
-fto = 'scripts.reset:cli'
+fto = 'scripts.cli:cli'
 
 
 [tool.poetry.dependencies]
