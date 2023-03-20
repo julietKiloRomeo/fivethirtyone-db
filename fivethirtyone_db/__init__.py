@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 import pathlib
 
 
-print(pathlib.Path(__file__).parent.parent / "vars.env")
 load_dotenv(pathlib.Path(__file__).parent.parent / "vars.env")
 
 _credentials = dict(

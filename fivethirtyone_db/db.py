@@ -15,6 +15,9 @@ CREATE_ATHLETE = """CREATE TABLE athlete (
 
 CREATE_WORKSET = """CREATE TABLE workset (
   id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  base_max float,
+  base_reps int,
+  cycle int,
   weight float,
   reps int,
   lift_name varchar(31),
@@ -112,7 +115,9 @@ def all_sets(athlete=None):
         cursor = conn.cursor()
         cursor.execute(show_table_query)
         # Fetch rows from last executed query
-        return cursor.column_names, cursor.fetchall()
+        return [
+          {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
+        ]
 
 def delete_workset_by_id(ws_id):
     """delete a row in the workset table
@@ -127,19 +132,21 @@ def delete_workset_by_id(ws_id):
         conn.commit()
 
 
-def insert_record(lift, athlete, date, reps, weight):
+def insert_record(lift, athlete, weight, base_max, base_reps, cycle):
     """
     lift (str): in ["deadlift", "bench", "military", "squat"]
     athlete (str): name of athlete
-    date (str): (YYYY-MM-DD)
-    reps (int):
     weight (float):
+    base_max (float):
+    base_reps (int):
+    cycle (int):
     """
+
 
     insert_workset = f"""
   INSERT INTO workset
-  (lift_name, athlete_name, date, reps, weight)
-  VALUES ( '{lift}', '{athlete}', '{date}', {reps}, {weight} )
+  (lift_name, athlete_name, weight, base_max, base_reps, cycle)
+  VALUES ( '{lift}', '{athlete}', {weight}, {base_max}, {base_reps}, {cycle})
   """
 
     with db_connection() as conn:
@@ -147,3 +154,49 @@ def insert_record(lift, athlete, date, reps, weight):
         # add csv records instead
         cursor.execute(insert_workset)
         conn.commit()
+
+
+def latest_max(lift, athlete):
+    """
+    lift (str): in ["deadlift", "bench", "military", "squat"]
+    athlete (str): name of athlete
+
+    Returns:
+        list[dict] : [{'weight': 32.5, 'reps': 5, 'date': datetime.date(2023, 3, 6), 'athlete_name': 'camilla', 'lift_name': 'bench'}]
+    """
+
+    query = f"""SELECT weight, reps, date, athlete_name, lift_name FROM workset
+    where athlete_name='{athlete}' and
+    lift_name='{lift}' and is_max
+    order by date desc limit 1"""
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        return [
+          {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
+        ]
+
+def latest_cycle(athlete):
+    """
+    athlete (str): name of athlete
+
+    Returns:
+        int or None
+    """
+
+    query = f"""SELECT cycle, date, athlete_name FROM workset
+    where athlete_name='{athlete}'
+    and cycle IS NOT NULL
+    order by date desc limit 1"""
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        records = [
+          {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
+        ]
+      
+    if len(records):
+      return records[0]["cycle"]
+    return None

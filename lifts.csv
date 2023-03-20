@@ -78,3 +78,7 @@ cam,2023-03-06,deadlift,60,5,True
 cam,2023-03-06,bench,32.5,5,True
 cam,2023-03-13,military,22.5,4,True
 cam,2023-03-13,squat,40,4,True
+cam,2023-03-16,deadlift,52.5,7,False
+cam,2023-03-16,bench,27.5,11,False
+cam,2023-03-20,military,17.5,9,False
+cam,2023-03-20,squat,32.5,10,False
