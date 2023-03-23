@@ -1,7 +1,8 @@
 import pandas as pd
-
 import fivethirtyone_db
+
 from fivethirtyone_db import db, analysis
+
 
 def test_connection(capsys):
 
@@ -12,14 +13,17 @@ def test_connection(capsys):
         print("- "*50)
 
 def test_worksets_fetch():
-    return 1
-    # gett all lifts
-    cols, ws = db.all_sets()
+    """get all lifts"""
 
-    lifts = pd.DataFrame( ws, columns=cols)
-    lifts['date']= pd.to_datetime(lifts['date'])
-    lifts = lifts.assign(one_rep_max = analysis.one_rm_fusion(lifts.weight, lifts.reps))
-    lifts = lifts.assign(
-        train_max = lifts.one_rep_max*0.9,
-    )
-    lifts["is_max"] = True
+    records = db.all_sets()
+
+
+def test_get_user(capsys):
+    """get all lifts"""
+    
+    user = db.get_user("camilla")
+
+    with capsys.disabled():
+        print("- "*50)
+        print(user)
+        print("- "*50)

@@ -6,6 +6,18 @@
 ```
 
 
-We got to the init file in:
+We got to https://flask.palletsprojects.com/en/2.2.x/tutorial/views/
 
-https://flask.palletsprojects.com/en/2.2.x/tutorial/factory/
+
+```
+ > poetry shell
+ > flask --app fivethirtyone_db run --debug
+```
+
+```
+ > fto set-pwd --athlete jimmy --password xxxx
+```
+
+
+then go to `http://127.0.0.1:5000`
+

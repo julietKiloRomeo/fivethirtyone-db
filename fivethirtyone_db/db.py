@@ -2,7 +2,7 @@ import pandas as pd
 from mysql.connector import connect, Error
 from . import _credentials
 from contextlib import contextmanager
-
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 CREATE_LIFT = """CREATE TABLE lift (
@@ -11,6 +11,7 @@ CREATE_LIFT = """CREATE TABLE lift (
 
 CREATE_ATHLETE = """CREATE TABLE athlete (
   name varchar(31) NOT NULL PRIMARY KEY,
+  password varchar(120),
 );"""
 
 CREATE_WORKSET = """CREATE TABLE workset (
@@ -53,48 +54,128 @@ def db_connection():
 #        print(e)
         raise
 
-# csv into DB
-def import_csv_into_db(csv_path="lifts.csv"):
-    """import csv directly into worksets
 
-        csv must be in the following format:
-    lifter	date	lift	weight	reps	is_max
-    irka	2022-09-13	deadlift	80	3	TRUE
-    irka	2022-09-13	military	50	5	TRUE
-    jikr	2022-09-13	deadlift	100	6	TRUE
-    jikr	2022-09-13	military	40	5	TRUE
+class Table:
 
-        existing data are deleted!
+    CREATE = ""
+    __tablename__ = ""
 
+    @classmethod
+    def create(cls):
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            # delete everything
+            cursor.execute(cls.CREATE)
+            conn.commit()
+
+    def _execute(self, sql):
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql)
+            conn.commit()
+
+    def _fetchall(self, sql):
+        """fetch as records
+        """
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql)
+            return [
+            {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
+            ]
+
+    def _fetchone(self, sql):
+        """fetch as records
+        """
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql)
+            record = cursor.fetchone()
+            return {key:val for key, val in zip(cursor.column_names, record)}
+
+class Athlete(Table):
+
+    __tablename__ = "athlete"
+
+    CREATE = """CREATE TABLE athlete (
+    name varchar(31) NOT NULL PRIMARY KEY,
+    password varchar(120),
+    );"""
+
+    def __init__(self, name, password):
+        self.name = name
+        self.password = password
+
+    def add(self):
+        insert_athlete = f"""
+    INSERT INTO athlete
+    (name)
+    VALUES ( '{self.name}')
     """
-    print(_credentials)
-    df = pd.read_csv(csv_path)
+        self._execute(insert_athlete)
+        self._set_password(self.password)
 
-    name_map = {
-        "irka": "irfan",
-        "cam": "camilla",
-        "jikr": "jimmy",
-        "alvi": "alvilde",
-    }
+    def _set_password(self, pwd):
 
-    df = df.assign(db_name=[name_map[n] for n in df["lifter"]]).query(
-        "not lifter=='alvi'"
-    )
-    recs = [(*prec, int(reps), bool(is_max), name) for _, _, *prec, reps, is_max, name in df.to_records()]
+        hsh = generate_password_hash(pwd)
+        change = f"""
+            UPDATE {self.__tablename__}
+            SET password='{hsh}'
+            where name='{self.name}'
+        """
+        self._execute(change)
 
-    insert_worksets = """
-      INSERT INTO workset
-      (date, lift_name, weight, reps, is_max, athlete_name)
-      VALUES ( %s, %s, %s, %s, %s, %s )"""
 
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        # delete everything
-        cursor.execute("delete from workset")
-        conn.commit()
-        # add csv records instead
-        cursor.executemany(insert_worksets, recs)
-        conn.commit()
+
+class Workset(Table):
+
+    __tablename__ = "workset"
+
+    CREATE = """CREATE TABLE workset (
+    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    base_max float,
+    base_reps int,
+    cycle int,
+    weight float,
+    reps int,
+    lift_name varchar(31),
+    athlete_name varchar(31),
+    date date,
+    is_max boolean,
+        UNIQUE KEY `uc_set` (`lift_name`, `athlete_name`, `date`),
+    KEY lift_name_idx (lift_name),
+    KEY athlete_name_idx (athlete_name)
+    );"""
+
+
+    def __init__(self, base_max, base_reps, cycle, weight, lift_name, athlete_name, date=None, is_max=False, reps=None):
+        self.wsid = None
+        self.base_max = base_max
+        self.base_reps = base_reps
+        self.cycle = cycle
+        self.weight = weight
+        self.lift_name = lift_name
+        self.athlete_name = athlete_name
+        self.date = date
+        self.is_max = is_max
+        self.reps = reps
+
+    @staticmethod
+    def fetch(wsid):
+
+        record, = self._fetchone(f"select * from workset where id={wsid}")
+        return record
+
+    def add(self):
+        insert_workset = f"""
+    INSERT INTO workset
+    (lift_name, athlete_name, weight, base_max, base_reps, cycle, date, is_max, reps)
+    VALUES ( '{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, {self.date}, {self.is_max}, {self.reps})
+    """
+        self._execute(insert_workset)
+
+
+
 
 
 def all_sets(athlete=None):
@@ -104,7 +185,7 @@ def all_sets(athlete=None):
         athlete (str): optional name of athlete
 
     Returns:
-        (tuple[str]), list[tuple]): column names, row-records (ws_id, weight, reps, lift, name, date, is_max)
+        list[dict] : rows in workset table as records
     """
     if athlete:
         show_table_query = f"SELECT * FROM workset where athlete_name='{athlete}'"
@@ -132,7 +213,7 @@ def delete_workset_by_id(ws_id):
         conn.commit()
 
 
-def insert_record(lift, athlete, weight, base_max, base_reps, cycle):
+def insert_record(lift, athlete, weight, base_max, base_reps, cycle, is_max="false"):
     """
     lift (str): in ["deadlift", "bench", "military", "squat"]
     athlete (str): name of athlete
@@ -140,15 +221,15 @@ def insert_record(lift, athlete, weight, base_max, base_reps, cycle):
     base_max (float):
     base_reps (int):
     cycle (int):
+    is_max (bool=False):
     """
 
 
     insert_workset = f"""
   INSERT INTO workset
-  (lift_name, athlete_name, weight, base_max, base_reps, cycle)
-  VALUES ( '{lift}', '{athlete}', {weight}, {base_max}, {base_reps}, {cycle})
+  (lift_name, athlete_name, weight, base_max, base_reps, cycle, is_max)
+  VALUES ( '{lift}', '{athlete}', {weight}, {base_max}, {base_reps}, {cycle}, {is_max})
   """
-
     with db_connection() as conn:
         cursor = conn.cursor()
         # add csv records instead
@@ -200,3 +281,31 @@ def latest_cycle(athlete):
     if len(records):
       return records[0]["cycle"]
     return None
+
+
+def set_password(athlete, pwd):
+    change = f"""
+        UPDATE athlete
+        SET password='{generate_password_hash(pwd)}'
+        where name='{athlete}'
+    """
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(change)
+        conn.commit()
+
+
+def get_user(athlete):
+    """
+    Returns:
+        str, str : name, hashed-password
+    """
+
+    query = f"""
+        SELECT name, password from athlete
+        where name='{athlete}'
+    """
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        return cursor.fetchone()

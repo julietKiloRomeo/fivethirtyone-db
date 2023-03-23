@@ -61,7 +61,7 @@ def compile(athlete, lift, train_max, program, cycle=0):
     lifter (str):
     exercise (str):
     lifts (dataframe):
-    program (dataframe): 
+    program (dataframe):
 
     """
     

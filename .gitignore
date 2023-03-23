@@ -133,3 +133,4 @@ dmypy.json
 poetry.lock
 requirements.txt
 *.ipynb
+vars.yaml

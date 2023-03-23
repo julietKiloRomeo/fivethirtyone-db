@@ -1,18 +1,18 @@
 import pandas as pd
 from io import StringIO
 import os
-from dotenv import load_dotenv
 import pathlib
+import yaml
 
+with pathlib.Path("/home/jkr/projects/fivethirtyone-db/vars.yaml").open("r") as f:
+    _credentials = yaml.load(f, Loader=yaml.FullLoader)
 
-load_dotenv(pathlib.Path(__file__).parent.parent / "vars.env")
-
-_credentials = dict(
-    host=os.getenv("DBHOST"),
-    user=os.getenv("DBUSERNAME"),
-    password=os.getenv("DBPASSWORD"),
-    database=os.getenv("DATABASE"),
-)
+if _credentials["host"] == "localhost":
+    print(_credentials)
+    raise Exception("DB not configured!")
+if _credentials["host"] is None:
+    print(_credentials)
+    raise Exception("DB not configured!")
 
 csv_program_5 = """
 pct,reps
@@ -83,11 +83,14 @@ to_add_pr_cycle = dict(
 
 
 import os
+from flask import Flask, g
 
-from flask import Flask
 
 
 def create_app(test_config=None):
+    from . import db
+    from . import auth
+
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
@@ -108,9 +111,11 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # a simple page that says hello
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
+    from . import blog, api
+    app.register_blueprint(blog.bp)
+    app.register_blueprint(api.bp)
+    app.add_url_rule('/', endpoint='index')
+
+    app.register_blueprint(auth.bp)
 
     return app
