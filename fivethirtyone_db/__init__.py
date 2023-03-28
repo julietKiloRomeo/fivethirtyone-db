@@ -59,6 +59,15 @@ programs = dict(
     one = pd.read_csv(StringIO(csv_program_1)),
     off = pd.read_csv(StringIO(csv_program_off)),
 )
+programs[5] = programs["five"]
+programs[3] = programs["three"]
+programs[1] = programs["one"]
+programs[0] = programs["off"]
+programs["5"] = programs["five"]
+programs["3"] = programs["three"]
+programs["1"] = programs["one"]
+programs["0"] = programs["off"]
+
 
 comments = dict(
     squat="rack @ 17, safetybar @ 3",

@@ -67,7 +67,7 @@ def add_cycle(athlete, cycle, rep_base):
     """
     get_latest_cycle = cycle is None
     if get_latest_cycle:
-        latest = db.latest_cycle(athlete)
+        latest = db.latest_cycle(athlete).get("cycle", None)
         if latest:
             cycle = latest + 1
             print(f"incrementing cycle from {latest} to {cycle} (use --cycle n to override)")
@@ -76,7 +76,7 @@ def add_cycle(athlete, cycle, rep_base):
     program = fivethirtyone_db.programs[rep_base]
 
     for lift in LIFTS:
-        repmax = db.latest_max(lift, athlete)[0]
+        repmax = db.latest_max(lift, athlete)
         one_rm_max = analysis.one_rm_fusion(repmax['weight'], repmax['reps'])
         train_max = 0.9*one_rm_max
         to_lift = analysis.compile(athlete, lift, train_max, program, cycle=0)
@@ -84,6 +84,8 @@ def add_cycle(athlete, cycle, rep_base):
         weight = to_lift[5]["weight"]
         db.insert_record(lift, athlete, weight, one_rm_max, base_reps, cycle)
         
+
+
 @cli.command(name='add-reps')
 @click.option('--athlete', required=True, prompt=True, type=click.Choice(['camilla', 'irfan', 'jimmy', 'christina'], case_sensitive=False))
 @click.option('--lift', required=True, prompt=True, type=click.Choice(['bench', 'military', 'squat', 'deadlift'], case_sensitive=False))

@@ -117,7 +117,23 @@
 
     <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
 
-      <div id='myDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+        {{workset}}
+        <form>
+            <div class="form-group">
+              <label for="lift-input">Lift</label>
+              <input type="string" class="form-control" id="lift-input" placeholder="Enter lift type">
+              <small id="lift-help" class="form-text text-muted">choose lift</small>
+            </div>
+            <div class="form-group">
+              <label for="exampleInputPassword1">Password</label>
+              <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Password">
+            </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="exampleCheck1">
+              <label class="form-check-label" for="exampleCheck1">Check me out</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </form>
 
     </main>
   </div>
@@ -129,28 +145,6 @@
 
 
   </body>
-
-  <script src='https://cdn.plot.ly/plotly-2.18.2.min.js'></script>
-
-
-    <!-- https://chartjs.bootcss.com/samples/scales/time/line.html -->
-    <script>
-      var jsd = {{data | tojson}};
-
-      var layout = {
-          title: 'Estimated 1RM maxes',
-          height: 700,
-          legend: {"orientation": "h", x: 0.4, y: 1.0}
-      };
-      
-      // style the traces in blog.py
-      Plotly.newPlot('myDiv', jsd.bench, layout);
-      Plotly.addTraces('myDiv', jsd.deadlift);
-      Plotly.addTraces('myDiv', jsd.military);
-      Plotly.addTraces('myDiv', jsd.squat);
-  
-  
-    </script>
 
 
 

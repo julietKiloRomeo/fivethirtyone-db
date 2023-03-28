@@ -1,0 +1,94 @@
+
+<!doctype html>
+<html lang="en">
+
+
+<head>
+
+    <style>
+        /* General styles */
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            line-height: 1.6;
+            background-color: #FFF;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2 {
+            font-weight: 300;
+            margin: 0;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border: 0px solid #CCC;
+        }
+
+        /* Specific styles */
+        h1 {
+            font-size: 36px;
+            padding: 20px;
+            background-color: #FFF;
+            color: #444;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            padding: 10px;
+            background-color: #FFF;
+            color: #666;
+            text-align: center;
+        }
+
+        div > div {
+            display: inline-block;
+            width: 94%;
+            vertical-align: top;
+            margin: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #FFF;
+        }
+    </style>
+
+
+</head>
+<body>
+    
+    <h1> {{name}} cycle {{cycle}}</h1>
+
+    <div>
+        {%for ws in worksets_to_do %}
+        <div>
+            <h2> {{ws.lift}} </h2>
+
+            <table>
+                <tr>
+                    {% for rep in ws.reps %}
+                    <td>{{rep}}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for w in ws.weight %}
+                    <td>{{w}}</td>
+                    {% endfor %}
+                </tr>
+              </table> 
+        
+        </div>
+        {%endfor%}
+    </div>
+
+  </body>
+</html>

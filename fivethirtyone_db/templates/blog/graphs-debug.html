@@ -1,0 +1,55 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="jikr">
+    <title>Lifts</title>
+
+  </head>
+  <body>
+    
+	<div id='myDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+
+  </body>
+
+
+
+
+  <script src='https://cdn.plot.ly/plotly-2.18.2.min.js'></script>
+
+
+<!-- https://chartjs.bootcss.com/samples/scales/time/line.html -->
+  <script>
+    var data = {
+        "bench": [{
+            "x": ['2013-10-04', '2013-11-01', '2013-11-14'],
+            "y": [1, 3, 6],
+            "type": 'scatter',
+            "mode": 'lines+markers',
+            "line": {"shape": 'hvh'},
+            "name": "bench"
+        }],
+        "deadlift": [{
+            "x": ['2013-10-04', '2013-11-04', '2013-11-10'],
+            "y": [2, 3, 5],
+            "type": 'scatter',
+            "mode": 'lines+markers',
+            "line": {"shape": 'hvh'},
+            "name": "deadlift"
+        }]
+    }
+
+    var layout = {
+        title: 'Graph Title'
+    };
+
+    Plotly.newPlot('myDiv', data.bench, layout);
+    Plotly.addTraces('myDiv', data.deadlift);
+
+
+  </script>
+
+</html>

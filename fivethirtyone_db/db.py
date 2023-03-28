@@ -68,13 +68,15 @@ class Table:
             cursor.execute(cls.CREATE)
             conn.commit()
 
-    def _execute(self, sql):
+    @staticmethod
+    def _execute(sql):
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
             conn.commit()
 
-    def _fetchall(self, sql):
+    @staticmethod
+    def _fetchall(sql):
         """fetch as records
         """
         with db_connection() as conn:
@@ -84,7 +86,8 @@ class Table:
             {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
             ]
 
-    def _fetchone(self, sql):
+    @staticmethod
+    def _fetchone(sql):
         """fetch as records
         """
         with db_connection() as conn:
@@ -102,7 +105,7 @@ class Athlete(Table):
     password varchar(120),
     );"""
 
-    def __init__(self, name, password):
+    def __init__(self, name, password=None):
         self.name = name
         self.password = password
 
@@ -124,8 +127,13 @@ class Athlete(Table):
             where name='{self.name}'
         """
         self._execute(change)
+    
+    def worksets_to_do(self):
 
-
+        query = f"""SELECT * FROM workset
+        where athlete_name='{self.name}'
+        and date IS NULL"""
+        return self._fetchall(query)
 
 class Workset(Table):
 
@@ -163,7 +171,7 @@ class Workset(Table):
     @staticmethod
     def fetch(wsid):
 
-        record, = self._fetchone(f"select * from workset where id={wsid}")
+        record = Workset._fetchone(f"select * from workset where id={wsid}")
         return record
 
     def add(self):
@@ -175,7 +183,16 @@ class Workset(Table):
         self._execute(insert_workset)
 
 
-
+    @staticmethod
+    def update_row(wsid, date, lift_name, reps, weight):
+        """update key-value pairs - keys must be in columns!
+        """
+        change = f"""
+            UPDATE workset
+            SET date = '{date}', lift_name = '{lift_name}', reps = {reps if reps else "NULL"}, weight = {weight if weight else "NULL"}
+            where id={wsid}
+        """.replace("''", "NULL")
+        Workset._execute(change)
 
 
 def all_sets(athlete=None):
@@ -254,19 +271,17 @@ def latest_max(lift, athlete):
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query)
-        return [
-          {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
-        ]
+        return {key:val for key, val in zip(cursor.column_names, cursor.fetchone())}
 
 def latest_cycle(athlete):
     """
     athlete (str): name of athlete
 
     Returns:
-        int or None
+        dict : with keys cycle, base_reps and base_max
     """
 
-    query = f"""SELECT cycle, date, athlete_name FROM workset
+    query = f"""SELECT cycle, base_reps, base_max FROM workset
     where athlete_name='{athlete}'
     and cycle IS NOT NULL
     order by date desc limit 1"""
@@ -274,13 +289,7 @@ def latest_cycle(athlete):
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query)
-        records = [
-          {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
-        ]
-      
-    if len(records):
-      return records[0]["cycle"]
-    return None
+        return {key:val for key, val in zip(cursor.column_names, cursor.fetchone())}
 
 
 def set_password(athlete, pwd):
