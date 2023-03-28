@@ -1,14 +1,13 @@
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, url_for
-)
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.exceptions import abort
 
 from .auth import login_required
 from . import db
 
-bp = Blueprint('api', __name__, url_prefix='/api')
+bp = Blueprint("api", __name__, url_prefix="/api")
 
-@bp.route('/lifts/<lift_name>')
+
+@bp.route("/lifts/<lift_name>")
 @login_required
 def get_lift(lift_name):
 
@@ -19,9 +18,8 @@ def get_lift(lift_name):
     return [lift for lift in lifts if lift["lift_name"] == lift_name]
 
 
-@bp.route('/lift/rm/<id>')
+@bp.route("/lift/rm/<id>")
 @login_required
 def rm_lift(id):
     print(f"delete lift #{id}!")
     return redirect(request.referrer)
-

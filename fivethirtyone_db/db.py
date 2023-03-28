@@ -30,6 +30,7 @@ CREATE_WORKSET = """CREATE TABLE workset (
   KEY athlete_name_idx (athlete_name)
 );"""
 
+
 @contextmanager
 def db_connection():
     """
@@ -51,7 +52,7 @@ def db_connection():
         with connect(**_credentials) as connection:
             yield connection
     except Error as e:
-#        print(e)
+        #        print(e)
         raise
 
 
@@ -77,24 +78,24 @@ class Table:
 
     @staticmethod
     def _fetchall(sql):
-        """fetch as records
-        """
+        """fetch as records"""
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
             return [
-            {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
+                {key: val for key, val in zip(cursor.column_names, record)}
+                for record in cursor.fetchall()
             ]
 
     @staticmethod
     def _fetchone(sql):
-        """fetch as records
-        """
+        """fetch as records"""
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
             record = cursor.fetchone()
-            return {key:val for key, val in zip(cursor.column_names, record)}
+            return {key: val for key, val in zip(cursor.column_names, record)}
+
 
 class Athlete(Table):
 
@@ -127,13 +128,14 @@ class Athlete(Table):
             where name='{self.name}'
         """
         self._execute(change)
-    
+
     def worksets_to_do(self):
 
         query = f"""SELECT * FROM workset
         where athlete_name='{self.name}'
         and date IS NULL"""
         return self._fetchall(query)
+
 
 class Workset(Table):
 
@@ -155,8 +157,18 @@ class Workset(Table):
     KEY athlete_name_idx (athlete_name)
     );"""
 
-
-    def __init__(self, base_max, base_reps, cycle, weight, lift_name, athlete_name, date=None, is_max=False, reps=None):
+    def __init__(
+        self,
+        base_max,
+        base_reps,
+        cycle,
+        weight,
+        lift_name,
+        athlete_name,
+        date=None,
+        is_max=False,
+        reps=None,
+    ):
         self.wsid = None
         self.base_max = base_max
         self.base_reps = base_reps
@@ -182,16 +194,16 @@ class Workset(Table):
     """
         self._execute(insert_workset)
 
-
     @staticmethod
     def update_row(wsid, date, lift_name, reps, weight):
-        """update key-value pairs - keys must be in columns!
-        """
+        """update key-value pairs - keys must be in columns!"""
         change = f"""
             UPDATE workset
             SET date = '{date}', lift_name = '{lift_name}', reps = {reps if reps else "NULL"}, weight = {weight if weight else "NULL"}
             where id={wsid}
-        """.replace("''", "NULL")
+        """.replace(
+            "''", "NULL"
+        )
         Workset._execute(change)
 
 
@@ -214,8 +226,10 @@ def all_sets(athlete=None):
         cursor.execute(show_table_query)
         # Fetch rows from last executed query
         return [
-          {key:val for key, val in zip(cursor.column_names, record)} for record in cursor.fetchall()
+            {key: val for key, val in zip(cursor.column_names, record)}
+            for record in cursor.fetchall()
         ]
+
 
 def delete_workset_by_id(ws_id):
     """delete a row in the workset table
@@ -240,7 +254,6 @@ def insert_record(lift, athlete, weight, base_max, base_reps, cycle, is_max="fal
     cycle (int):
     is_max (bool=False):
     """
-
 
     insert_workset = f"""
   INSERT INTO workset
@@ -271,7 +284,8 @@ def latest_max(lift, athlete):
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query)
-        return {key:val for key, val in zip(cursor.column_names, cursor.fetchone())}
+        return {key: val for key, val in zip(cursor.column_names, cursor.fetchone())}
+
 
 def latest_cycle(athlete):
     """
@@ -289,7 +303,7 @@ def latest_cycle(athlete):
     with db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query)
-        return {key:val for key, val in zip(cursor.column_names, cursor.fetchone())}
+        return {key: val for key, val in zip(cursor.column_names, cursor.fetchone())}
 
 
 def set_password(athlete, pwd):

@@ -2,7 +2,6 @@ import numpy as np
 from . import to_add_pr_cycle, SMALLEST_W_INC
 
 
-
 def one_rm_brzycki(weight, reps):
     """calculate 1rm max from several reps
     of a submaximal weight
@@ -64,7 +63,7 @@ def compile(athlete, lift, train_max, program, cycle=0):
     program (dataframe):
 
     """
-    
+
     train_max += to_add_pr_cycle[lift] * cycle
 
     weight = (
@@ -74,5 +73,3 @@ def compile(athlete, lift, train_max, program, cycle=0):
     to_lift.name = athlete
 
     return to_lift
-
-
