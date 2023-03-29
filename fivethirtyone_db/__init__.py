@@ -4,15 +4,6 @@ import os
 import pathlib
 import yaml
 
-with pathlib.Path("/home/jkr/projects/fivethirtyone-db/vars.yaml").open("r") as f:
-    _credentials = yaml.load(f, Loader=yaml.FullLoader)
-
-if _credentials["host"] == "localhost":
-    print(_credentials)
-    raise Exception("DB not configured!")
-if _credentials["host"] is None:
-    print(_credentials)
-    raise Exception("DB not configured!")
 
 csv_program_5 = """
 pct,reps
@@ -93,8 +84,17 @@ to_add_pr_cycle = dict(
 import os
 from flask import Flask, g
 
+_credentials = {}
 
-def create_app(test_config=None):
+def create_app(db_credentials=None):
+
+    if db_credentials is None:
+        with pathlib.Path("vars2.yaml").open("r") as f:
+            db_credentials = yaml.load(f, Loader=yaml.FullLoader)
+
+    _credentials.update(**db_credentials)
+
+
     from . import db
     from . import auth
 
@@ -104,13 +104,6 @@ def create_app(test_config=None):
         SECRET_KEY="dev",
         DATABASE=os.path.join(app.instance_path, "flaskr.sqlite"),
     )
-
-    if test_config is None:
-        # load the instance config, if it exists, when not testing
-        app.config.from_pyfile("config.py", silent=True)
-    else:
-        # load the test config if passed in
-        app.config.from_mapping(test_config)
 
     # ensure the instance folder exists
     try:
