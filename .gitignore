@@ -131,6 +131,5 @@ dmypy.json
 
 *.env
 poetry.lock
-requirements.txt
 *.ipynb
 vars.yaml
