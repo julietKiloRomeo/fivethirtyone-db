@@ -84,15 +84,16 @@ to_add_pr_cycle = dict(
 import os
 from flask import Flask, g
 
-_credentials = {}
+try:
+    with pathlib.Path("vars.yaml").open("r") as f:
+        _credentials = yaml.load(f, Loader=yaml.FullLoader)
+except:
+    _credentials = {}
 
 def create_app(db_credentials=None):
 
-    if db_credentials is None:
-        with pathlib.Path("vars2.yaml").open("r") as f:
-            db_credentials = yaml.load(f, Loader=yaml.FullLoader)
-
-    _credentials.update(**db_credentials)
+    if not db_credentials is None:
+        _credentials.update(**db_credentials)
 
 
     from . import db

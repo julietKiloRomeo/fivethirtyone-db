@@ -108,6 +108,7 @@ def workset(wsid):
 
     return redirect(request.referrer)
 
+from xhtml2pdf import pisa 
 
 @bp.route("/pdf")
 @login_required
@@ -146,8 +147,16 @@ def make_pdf():
         cycle=worksets_to_do[0]["cycle"],
     )
 
+
+
     with tempfile.NamedTemporaryFile() as f:
-        pdfkit.from_string(html, f.name)
+        # pdfkit.from_string(html, f.name)
+
+        # convert HTML to PDF
+        pisa_status = pisa.CreatePDF(
+            html,                # the HTML to convert
+            dest=f)           # file handle to recieve result
+
 
         return send_file(f.name, as_attachment=True, download_name=f"{g.user}.pdf")
 

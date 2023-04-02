@@ -5,10 +5,13 @@
 
 <head>
 
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
     <style>
         /* General styles */
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
             line-height: 1.6;
             background-color: #FFF;
             color: #333;
@@ -31,34 +34,30 @@
         td {
             padding: 10px;
             text-align: center;
-            border: 0px solid #CCC;
+            border: 1px solid #CCC;
         }
+
 
         /* Specific styles */
         h1 {
             font-size: 36px;
             padding: 20px;
-            background-color: #FFF;
-            color: #444;
             text-align: center;
         }
 
         h2 {
             font-size: 24px;
             padding: 10px;
-            background-color: #FFF;
-            color: #666;
             text-align: center;
         }
 
         div > div {
-            display: inline-block;
-            width: 94%;
+            display: block; /* Changed from inline-block */
+            width: 100%; /* Changed from 24% */
             vertical-align: top;
-            margin: 10px;
+            margin: 10px 0; /* Changed from 10px */
             padding: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            background-color: #FFF;
         }
     </style>
 
