@@ -14,8 +14,9 @@ from werkzeug.exceptions import abort
 from .auth import login_required
 from . import db, analysis, programs
 import datetime
+from xhtml2pdf import pisa
+import tempfile
 
-import pdfkit
 
 LIFTS = ["military", "deadlift", "bench", "squat"]
 
@@ -26,7 +27,6 @@ INCREMENTS = {
     0: {"next_base_reps": 5, "cycle_increment": 1},
 }
 
-import tempfile
 
 bp = Blueprint("blog", __name__)
 
@@ -108,7 +108,6 @@ def workset(wsid):
 
     return redirect(request.referrer)
 
-from xhtml2pdf import pisa 
 
 @bp.route("/pdf")
 @login_required
@@ -147,16 +146,13 @@ def make_pdf():
         cycle=worksets_to_do[0]["cycle"],
     )
 
-
-
     with tempfile.NamedTemporaryFile() as f:
         # pdfkit.from_string(html, f.name)
 
         # convert HTML to PDF
         pisa_status = pisa.CreatePDF(
-            html,                # the HTML to convert
-            dest=f)           # file handle to recieve result
-
+            html, dest=f  # the HTML to convert
+        )  # file handle to recieve result
 
         return send_file(f.name, as_attachment=True, download_name=f"{g.user}.pdf")
 

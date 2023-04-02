@@ -90,11 +90,11 @@ try:
 except:
     _credentials = {}
 
+
 def create_app(db_credentials=None):
 
     if not db_credentials is None:
         _credentials.update(**db_credentials)
-
 
     from . import db
     from . import auth
