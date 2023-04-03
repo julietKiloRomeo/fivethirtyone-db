@@ -25,6 +25,7 @@ INCREMENTS = {
     3: {"next_base_reps": 1, "cycle_increment": 0},
     1: {"next_base_reps": 0, "cycle_increment": 0},
     0: {"next_base_reps": 5, "cycle_increment": 1},
+    None: {"next_base_reps": 5, "cycle_increment": 0},
 }
 
 
