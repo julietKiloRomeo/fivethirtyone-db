@@ -92,19 +92,44 @@ def graphs():
     return render_template("blog/graphs.html", data=data)
 
 
+@bp.route("/workset/add", methods=("POST",))
+@login_required
+def new_workset():
+    new_set = dict(request.form)
+    db.insert_record(
+        lift=new_set["lift"],
+        athlete=g.user,
+        weight=new_set["weight"],
+        base_max="null",
+        base_reps="null",
+        cycle="null",
+        is_max="false"
+    )
+
+    return redirect(request.referrer)
+
+
 @bp.route("/workset/<wsid>", methods=("GET", "POST"))
 @login_required
 def workset(wsid):
 
-    if request.method == "POST":
-        updates = dict(request.form)
-        db.Workset.update_row(
-            wsid=updates["wsid"],
-            date=updates["date"],
-            lift_name=updates["lift"],
-            reps=updates["reps"],
-            weight=updates["weight"],
-        )
+    if request.method == "GET":
+        # what should we do here?
+        return redirect(request.referrer)
+
+    updates = dict(request.form)
+
+    if updates["send"] == "delete":
+        db.delete_workset_by_id(updates["wsid"])
+        return redirect(request.referrer)
+
+    db.Workset.update_row(
+        wsid=updates["wsid"],
+        date=updates["date"],
+        lift_name=updates["lift"],
+        reps=updates["reps"],
+        weight=updates["weight"],
+    )
 
     return redirect(request.referrer)
 
