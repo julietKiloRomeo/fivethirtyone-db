@@ -5,6 +5,7 @@
  > fto ls -a camilla
 ```
 
+poetry run flask --app fivethirtyone_db run --debug
 
 We got to https://flask.palletsprojects.com/en/2.2.x/tutorial/views/
 https://docs.digitalocean.com/tutorials/app-deploy-flask-app/

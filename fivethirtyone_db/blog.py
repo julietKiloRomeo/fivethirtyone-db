@@ -148,22 +148,7 @@ def make_pdf():
     #
     # convert to a program:
 
-    compile = lambda ws: analysis.compile(
-        g.user,
-        ws["lift_name"],
-        ws["base_max"] * 0.9,
-        programs[ws["base_reps"]],
-        cycle=ws["cycle"],
-    )
-    program = {ws["lift_name"]: compile(ws) for ws in worksets_to_do}
-    program = [
-        {
-            "lift": lift,
-            "reps": df.loc["reps"].to_list(),
-            "weight": df.loc["weight"].to_list(),
-        }
-        for lift, df in program.items()
-    ]
+    program = worksets_to_program(worksets_to_do, athlete=name)
 
     html = render_template(
         "blog/program.html",
@@ -187,6 +172,23 @@ def make_pdf():
     response.headers["Content-Disposition"] = "inline; filename=output.pdf"
     return response
 
+def worksets_to_program(worksets_to_do, athlete):
+    compile = lambda ws: analysis.compile(
+        athlete,
+        ws["lift_name"],
+        ws["base_max"] * 0.9,
+        programs[ws["base_reps"]],
+        cycle=ws["cycle"],
+    )
+    program = {ws["lift_name"]: compile(ws) for ws in worksets_to_do}
+    return [
+        {
+            "lift": lift,
+            "reps": df.loc["reps"].to_list(),
+            "weight": df.loc["weight"].to_list(),
+        }
+        for lift, df in program.items()
+    ]
 
 @bp.route("/cycle/new", methods=("GET", "POST"))
 @login_required
@@ -197,18 +199,33 @@ def add_cycle():
         # {'cycle-index': '0', 'rep-base': '1', 'bench-max': '35.0', 'deadlift-max': '67.5', 'military-max': '25.0', 'squat-max': '42.5'}
         new_cycle = dict(request.form)
         athlete = g.user
-        cycle = int(new_cycle["cycle-index"])
-        base_reps = int(new_cycle["rep-base"])
-        program = programs[base_reps]
 
-        for lift in LIFTS:
-            one_rm_max = float(new_cycle[lift + "-max"])
-            train_max = 0.9 * one_rm_max
-            to_lift = analysis.compile(athlete, lift, train_max, program, cycle=0)
-            weight = to_lift[5]["weight"]
-            db.insert_record(lift, athlete, weight, one_rm_max, base_reps, cycle)
+        for record in next_lifts(new_cycle, athlete):
+            db.insert_record(*record)
 
     return redirect(request.referrer)
+
+def next_lifts(new_cycle, athlete):
+    """
+
+    Arguments:
+        new_cycle (dict[str, str]) : with keys cycle-index, rep-base, bench-max, deadlift-max, military-max, squat-max
+        athlete (str) : 
+    
+    Returns:
+        (str, str, float, float, int, int) : same format as the input to add_cycle()
+    """
+    cycle = int(new_cycle["cycle-index"])
+    base_reps = int(new_cycle["rep-base"])
+    program = programs[base_reps]
+
+    for lift in LIFTS:
+        one_rm_max = float(new_cycle[lift + "-max"])
+        train_max = 0.9 * one_rm_max
+        to_lift = analysis.compile(athlete, lift, train_max, program, cycle=cycle)
+        weight = to_lift[5]["weight"]
+        yield (lift, athlete, weight, one_rm_max, base_reps, cycle)
+
 
 
 def estimate_next_cycle(athlete):

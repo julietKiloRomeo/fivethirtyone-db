@@ -68,7 +68,7 @@ def compile(athlete, lift, train_max, program, cycle=0):
 
     weight = (
         ((program["pct"] / 100 * train_max) // SMALLEST_W_INC) * SMALLEST_W_INC
-    ).astype(int)
+    )
     to_lift = program.assign(weight=weight)[["reps", "weight"]].T
     to_lift.name = athlete
 

@@ -29,7 +29,7 @@
               <input type="number" class="form-control" placeholder="repetitions" name="reps">
             </div>
             <div class="col-auto">
-              <input type="number" step="2.5" class="form-control" placeholder="weight" name="weight">
+              <input type="number" step="0.5" class="form-control" placeholder="weight" name="weight">
             </div>
             <div class="col-auto">
               <button type="submit" class="btn btn-primary mb-2">Add</button>
@@ -66,22 +66,22 @@
             </div>
             <div class="col-auto">
               <label for="bench-input" class="form-label">Bench max</label>
-              <input id="bench-input" type="number" step="2.5" class="form-control" placeholder="bench max"
+              <input id="bench-input" type="number" step="0.5" class="form-control" placeholder="bench max"
                 name="bench-max" value={{"%.2f"|format(next_cycle.bench)}}>
             </div>
             <div class="col-auto">
               <label for="dead-input" class="form-label">Deadlift max</label>
-              <input id="dead-input" type="number" step="2.5" class="form-control" placeholder="deadlift max"
+              <input id="dead-input" type="number" step="0.5" class="form-control" placeholder="deadlift max"
                 name="deadlift-max" value={{"%.2f"|format(next_cycle.deadlift)}}>
             </div>
             <div class="col-auto">
               <label for="mil-input" class="form-label">Military max</label>
-              <input id="mil-input" type="number" step="2.5" class="form-control" placeholder="military max"
+              <input id="mil-input" type="number" step="0.5" class="form-control" placeholder="military max"
                 name="military-max" value={{"%.2f"|format(next_cycle.military)}}>
             </div>
             <div class="col-auto">
               <label for="squat-input" class="form-label">Squat max</label>
-              <input id="squat-input" type="number" step="2.5" class="form-control" placeholder="squat max"
+              <input id="squat-input" type="number" step="0.5" class="form-control" placeholder="squat max"
                 name="squat-max" value={{"%.2f"|format(next_cycle.squat)}}>
             </div>
             <div class="col-auto">
@@ -126,7 +126,7 @@
               <input type="number" class="form-control" placeholder="repetitions" value="{{lift.reps}}" name="reps">
             </div>
             <div class="col-auto">
-              <input type="number" step="2.5" class="form-control" placeholder="weight" value="{{lift.weight}}"
+              <input type="number" step="0.5" class="form-control" placeholder="weight" value="{{lift.weight}}"
                 name="weight">
             </div>
             <div class="col-auto">
@@ -148,7 +148,7 @@
 <div class="row">
   <div class="col-md-auto">
     <a class="text-success" data-toggle="tooltip" data-placement="bottom" title="Make pdf" href="/pdf">
-      <i class="bi bi-file-pdf"></i> pdf
+      <i class="bi bi-file-pdf"></i> make program
     </a>
   </div>
   <div class="col-md-auto">
@@ -159,8 +159,8 @@
   </div>
   <div class="col-md-auto">
     <a class="text-success" data-bs-toggle="modal" data-bs-target="#modal-new-cycle" data-toggle="tooltip"
-      data-placement="bottom" title="Add a whole cycle">
-      <i class="bi bi-calendar-week-fill"></i> add cycle
+      data-placement="bottom" title="Add a new stage">
+      <i class="bi bi-calendar-week-fill"></i> new stage
     </a>
   </div>
 
@@ -173,6 +173,7 @@
         <th scope="col">Date</th>
         <th scope="col">Lift</th>
         <th scope="col">reps</th>
+        <th scope="col">target</th>
         <th scope="col">weight</th>
         <th scope="col"></th>
       </tr>
@@ -180,9 +181,10 @@
     <tbody>
       {% for lift in lifts %}
       <tr>
-        <td>{{ lift.date }}</td>
+        <td>{{ lift.date or "" }}</td>
         <td>{{ lift.lift_name }}</td>
-        <td>{{ lift.rep_str }}</td>
+        <td>{{ lift.reps or "" }}</td>
+        <td><span style="color:grey">{{ lift.base_reps or "" }}</span></td>
         <td>{{ lift.weight }}</td>
         <td>
           <a class="text-success" data-bs-toggle="modal" data-bs-target="#modal-{{lift.id}}">

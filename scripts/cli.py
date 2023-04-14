@@ -15,9 +15,19 @@ def cli():
 
 @cli.command(name="list", help="print all worksets")
 @click.option("-a", "--athlete")
-def list(athlete):
+@click.option(
+    "-r",
+    "--raw",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="show raw record",
+)
+def list(athlete, raw):
     for record in db.all_sets(athlete=athlete):
-        #        print(record)
+        if raw:
+            print(record)
+            continue
         if record["reps"]:
             print(
                 f"{record['id']:5.0f} {record['date']:%d %b} {record['athlete_name']:>10s} {record['lift_name']:10s} {record['reps']:2.0f} x {record['weight']:4.1f} kg"
