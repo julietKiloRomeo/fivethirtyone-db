@@ -63,3 +63,38 @@ to_add_pr_cycle:
   military: 2.5
 
 smallest_w_inc: 2.5
+
+lifts:
+  military:
+    add_pr_cycle: 2.5
+    assistance: "dips / chins"
+    comments: "rack @ 16, dips @ 9"
+  deadlift:
+    add_pr_cycle: 5
+    assistance: "ham raise / leg raise"
+  bench:
+    add_pr_cycle: 2.5
+    assistance: "dips / chins"
+  squat:
+    add_pr_cycle: 5
+    assistance: "one-leg-squat / ab-wheel"
+    comments: "rack @ 17, safetybar @ 3"
+
+
+increments:
+  5:
+    next_base_reps: 3
+    cycle_increment: 0
+  3:
+    next_base_reps: 1
+    cycle_increment: 0
+  1:
+    next_base_reps: 0
+    cycle_increment: 0
+  0:
+    next_base_reps: 5
+    cycle_increment: 1
+  None:
+    next_base_reps: 5
+    cycle_increment: 0
+

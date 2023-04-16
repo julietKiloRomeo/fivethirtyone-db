@@ -12,7 +12,7 @@ The module includes the following classes:
 
 import pandas as pd
 from mysql.connector import connect, Error
-from . import _credentials
+from . import _credentials, config, analysis
 from contextlib import contextmanager
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -159,7 +159,7 @@ class Athlete(Table):
     password varchar(120),
     );"""
 
-    def __init__(self, name, password=None):
+    def __init__(self, name, worksets=None):
         """
         Initialize an Athlete object.
 
@@ -168,12 +168,25 @@ class Athlete(Table):
             password (str, optional): The athlete's password. Defaults to None.
         """
         self.name = name
-        self.password = password
-        self.worksets = []
-        self._load_worksets()
-        self.pwd_hash = self._get_login()
 
-    def _get_login(self):
+        if worksets is None:
+            self._load_worksets()
+        else:
+            self.worksets = worksets
+    
+    def to_dict(self):
+        return {
+            "name":self.name,
+            "worksets":self.worksets,
+        }
+    @classmethod
+    def from_dict(cls, record):
+        if record is None:
+            return None
+        return cls(**record)
+
+    @staticmethod
+    def _get_login(name):
         """
         Get the user details for a given athlete.
 
@@ -185,11 +198,17 @@ class Athlete(Table):
         """
         query = f"""
             SELECT password from athlete
-            where name='{self.name}'
+            where name='{name}'
         """
-        return self._fetchone(query)["password"]
+        return Athlete._fetchone(query)["password"]
 
-    def add(self):
+
+    def _load_worksets(self):
+        print("RELOADING!")
+        self.worksets = self._fetchall(f"SELECT * FROM workset where athlete_name='{self.name}'")
+
+
+    def add(self, password):
         """
         Add the athlete to the database.
 
@@ -201,7 +220,7 @@ class Athlete(Table):
     VALUES ( '{self.name}')
     """
         self._execute(insert_athlete)
-        self._set_password(self.password)
+        self._set_password(password)
 
     def _set_password(self, pwd):
         """
@@ -264,8 +283,31 @@ class Athlete(Table):
             return {}
 
 
-    def _load_worksets(self):
-        self.worksets = self._fetchall(f"SELECT * FROM workset where athlete_name='{self.name}'")
+    def estimate_next_cycle(self):
+        """add a new cycle for an athlete"""
+
+        # TODO: FIX THIS!
+        # what is missing and who uses the old signature (blog.estimate_next_cycle)?
+
+        latest_workset = self.latest_cycle()
+
+        latest_max_set = {lift: self.latest_max(lift) for lift in config["lifts"]}
+        latest_max_1rm = {
+            lift: analysis.one_rm_fusion(ws["weight"], ws["reps"])
+            for lift, ws in latest_max_set.items()
+        }
+
+        current_cycle = latest_workset.get("cycle", -1)
+        current_base_reps = latest_workset.get("base_reps", 0)
+
+        next_cycle = current_cycle + config["increments"][current_base_reps]["cycle_increment"]
+        next_base_reps = config["increments"][current_base_reps]["next_base_reps"]
+
+        return dict(
+            next_cycle=next_cycle,
+            next_base_reps=next_base_reps,
+            **latest_max_1rm,
+        )
 
 
 class Workset(Table):
@@ -350,12 +392,23 @@ class Workset(Table):
 
         This method inserts the workset's data into the workset table.
         """
-        insert_workset = f"""
+        insert_finished_workset = f"""
     INSERT INTO workset
     (lift_name, athlete_name, weight, base_max, base_reps, cycle, date, is_max, reps)
     VALUES ( '{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, {self.date}, {self.is_max}, {self.reps})
     """
-        self._execute(insert_workset)
+        insert_planned_workset = f"""
+    INSERT INTO workset
+    (lift_name, athlete_name, weight, base_max, base_reps, cycle, is_max)
+    VALUES ( '{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, {self.is_max})
+    """
+        is_planned = self.date is None
+
+        if is_planned:
+            print(insert_planned_workset)
+            self._execute(insert_planned_workset)
+        else:
+            self._execute(insert_finished_workset)
 
     @staticmethod
     def update_row(wsid, date, lift_name, reps, weight):

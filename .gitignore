@@ -133,3 +133,5 @@ dmypy.json
 poetry.lock
 *.ipynb
 vars.yaml
+out.pdf
+db-dump/workset.json

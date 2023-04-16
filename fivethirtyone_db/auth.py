@@ -1,4 +1,5 @@
 import functools
+from datetime import datetime
 from . import db
 
 from flask import (
@@ -25,14 +26,14 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         error = None
-        athlete = db.Athlete(username)
 
-        if not check_password_hash(athlete.pwd_hash, password):
+        if not check_password_hash(db.Athlete._get_login(username), password):
             error = f"Incorrect password."
 
         if error is None:
             session.clear()
-            session["user_id"] = username
+            athlete = db.Athlete(username)
+            session["user_dict"] = athlete.to_dict()
             return redirect(url_for("index"))
 
         flash(error)
@@ -51,12 +52,17 @@ def load_logged_in_user():
     bp.before_app_request() registers a function that runs
     before the view function, no matter what URL is requested.
     """
-    user_id = session.get("user_id")
+    user_dict = session.get("user_dict")
+    g.user = None
 
-    if user_id is None:
-        g.user = None
-    else:
-        g.user = user_id
+    if user_dict is None:
+        return
+
+    for ws in user_dict.get("worksets"):
+        date_str = ws["date"]
+        ws["date"] = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z').date() if date_str else None
+
+    g.user = db.Athlete.from_dict(user_dict)
 
 
 @bp.route("/logout")

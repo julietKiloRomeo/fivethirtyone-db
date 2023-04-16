@@ -2,6 +2,7 @@ from flask import (
     Blueprint,
     flash,
     g,
+    session,
     redirect,
     render_template,
     request,
@@ -12,21 +13,12 @@ from flask import (
 from werkzeug.exceptions import abort
 
 from .auth import login_required
-from . import db, analysis, programs
+from . import db, analysis, programs, config
 import datetime
 from xhtml2pdf import pisa
 import tempfile
 
 
-LIFTS = ["military", "deadlift", "bench", "squat"]
-
-INCREMENTS = {
-    5: {"next_base_reps": 3, "cycle_increment": 0},
-    3: {"next_base_reps": 1, "cycle_increment": 0},
-    1: {"next_base_reps": 0, "cycle_increment": 0},
-    0: {"next_base_reps": 5, "cycle_increment": 1},
-    None: {"next_base_reps": 5, "cycle_increment": 0},
-}
 
 
 bp = Blueprint("blog", __name__)
@@ -37,7 +29,7 @@ bp = Blueprint("blog", __name__)
 def index():
 
     way_in_the_future = datetime.date(2100, 1, 1)
-    athlete = db.Athlete(name=g.user)
+    athlete = g.user
     lifts = sorted(
         athlete.worksets,
         key=lambda lift: lift["date"] or way_in_the_future,
@@ -47,15 +39,23 @@ def index():
     #    {'id': 321, 'weight': 27.5, 'reps': 5, 'lift_name': 'bench', 'athlete_name': 'camilla', 'date': datetime.date(2022, 11, 8), 'is_max': 1, 'base_max': None, 'base_reps': None, 'cycle': None},
     #    {'id': 321, 'weight': 27.5, 'reps': 5, 'lift_name': 'bench', 'athlete_name': 'camilla', 'date': datetime.date(2022, 11, 8), 'is_max': 1, 'base_max': None, 'base_reps': None, 'cycle': None}
     # ]
-    next_cycle = estimate_next_cycle(g.user)
+    next_cycle = athlete.estimate_next_cycle()
 
     return render_template("blog/index.html", lifts=lifts, next_cycle=next_cycle)
+
+def data_for_index_render():
+    pass
+
+
+def reload_session():
+    g.user._load_worksets()
+    session["user_dict"] = g.user.to_dict()
 
 
 @bp.route("/graphs")
 @login_required
 def graphs():
-    athlete = db.Athlete(name=g.user)
+    athlete = g.user
     completed_lifts = filter(lambda d: d["date"], athlete.worksets)
 
     def new_plotly_js_trace(lift):
@@ -75,8 +75,7 @@ def graphs():
             )
         ]
 
-    LIFTS = ["deadlift", "squat", "bench", "military"]
-    data = {lift: new_plotly_js_trace(lift) for lift in LIFTS}
+    data = {lift: new_plotly_js_trace(lift) for lift in config["lifts"]}
 
     for record in completed_lifts:
         # add x and y data
@@ -101,9 +100,11 @@ def new_workset():
         cycle="null",
         weight=new_set["weight"],
         lift_name=new_set["lift"],
-        athlete_name=g.user
+        athlete_name=g.user.name
     ).add()
 
+    # reload cached worksets
+    reload_session()
     return redirect(request.referrer)
 
 
@@ -119,6 +120,7 @@ def workset(wsid):
 
     if updates["send"] == "delete":
         db.Workset.delete_by_id(updates["wsid"])
+        reload_session()
         return redirect(request.referrer)
 
     db.Workset.update_row(
@@ -128,31 +130,30 @@ def workset(wsid):
         reps=updates["reps"],
         weight=updates["weight"],
     )
-
+    # reload cached worksets
+    reload_session()
     return redirect(request.referrer)
 
 
 @bp.route("/pdf")
 @login_required
 def make_pdf():
-    name = g.user
-
-    athlete = db.Athlete(name)
-    worksets_to_do = athlete.worksets_to_do()
+    athlete = g.user
+    first_set, *_ = worksets_to_do = athlete.worksets_to_do()
     # each workset is:
     # {'id': 379, 'weight': 35.0, 'reps': None, 'lift_name': 'squat', 'athlete_name': 'camilla', 'date': None, 'is_max': None,
     # 'base_max': 44.7921, 'base_reps': 3, 'cycle': 0}
     #
     # convert to a program:
 
-    program = worksets_to_program(worksets_to_do, athlete=name)
+    program = worksets_to_program(worksets_to_do, athlete=athlete.name)
 
     html = render_template(
         "blog/program.html",
-        name=name,
+        name=athlete.name,
         worksets_to_do=program,
-        cycle=worksets_to_do[0]["cycle"],
-        base_reps=worksets_to_do[0]["base_reps"],
+        cycle=first_set["cycle"],
+        base_reps=first_set["base_reps"],
     )
 
     with tempfile.NamedTemporaryFile() as f:
@@ -163,7 +164,7 @@ def make_pdf():
             html, dest=f  # the HTML to convert
         )  # file handle to recieve result
 
-        return send_file(f.name, as_attachment=True, download_name=f"{g.user}.pdf")
+        return send_file(f.name, as_attachment=True, download_name=f"{athlete.name}.pdf")
 
     response = make_response(pdf)
     response.headers["Content-Type"] = "application/pdf"
@@ -196,7 +197,7 @@ def add_cycle():
     if request.method == "POST":
         # {'cycle-index': '0', 'rep-base': '1', 'bench-max': '35.0', 'deadlift-max': '67.5', 'military-max': '25.0', 'squat-max': '42.5'}
         new_cycle = dict(request.form)
-        athlete = g.user
+        athlete = g.user.name
 
         for lift, athlete, weight, one_rm_max, base_reps, cycle in next_lifts(new_cycle, athlete):
             db.Workset(
@@ -208,6 +209,7 @@ def add_cycle():
                 athlete_name=athlete,
             ).add()
 
+    reload_session()
     return redirect(request.referrer)
 
 def next_lifts(new_cycle, athlete):
@@ -224,35 +226,10 @@ def next_lifts(new_cycle, athlete):
     base_reps = int(new_cycle["rep-base"])
     program = programs[base_reps]
 
-    for lift in LIFTS:
+    for lift in config["lifts"]:
         one_rm_max = float(new_cycle[lift + "-max"])
         train_max = 0.9 * one_rm_max
         to_lift = analysis.compile(athlete, lift, train_max, program, cycle=cycle)
         weight = to_lift[5]["weight"]
         yield (lift, athlete, weight, one_rm_max, base_reps, cycle)
 
-
-
-def estimate_next_cycle(athlete):
-    """add a new cycle for an athlete"""
-
-    athlete = db.Athlete(athlete)
-    latest_workset = athlete.latest_cycle()
-
-    latest_max_set = {lift: athlete.latest_max(lift) for lift in LIFTS}
-    latest_max_1rm = {
-        lift: analysis.one_rm_fusion(ws["weight"], ws["reps"])
-        for lift, ws in latest_max_set.items()
-    }
-
-    current_cycle = latest_workset.get("cycle", -1)
-    current_base_reps = latest_workset.get("base_reps", 0)
-
-    next_cycle = current_cycle + INCREMENTS[current_base_reps]["cycle_increment"]
-    next_base_reps = INCREMENTS[current_base_reps]["next_base_reps"]
-
-    return dict(
-        next_cycle=next_cycle,
-        next_base_reps=next_base_reps,
-        **latest_max_1rm,
-    )
