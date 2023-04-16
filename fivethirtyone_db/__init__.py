@@ -4,81 +4,21 @@ import os
 import pathlib
 import yaml
 
+def load_config(filename):
+    with open(filename, "r") as file:
+        return yaml.safe_load(file)
 
-csv_program_5 = """
-pct,reps
-40,5
-50,5
-60,3
-65,5
-75,5
-85,5+
-"""
+config = load_config(pathlib.Path(__file__).parent.parent / "program-config.yaml")
 
-csv_program_3 = """
-pct,reps
-40,5
-50,5
-60,3
-70,3
-80,3
-90,3+
-"""
+SMALLEST_W_INC = config["smallest_w_inc"]
 
-csv_program_1 = """
-pct,reps
-40,5
-50,5
-60,3
-75,5
-85,3
-95,1+
-"""
+programs = {key: pd.DataFrame(value) for key, value in config["programs"].items()}
+programs.update({key: value for key, value in zip([5, 3, 1, 0], programs.values())})
+programs.update({key: value for key, value in zip(["5", "3", "1", "0"], programs.values())})
 
-csv_program_off = """
-pct,reps
-40,5
-50,5
-40,5
-"""
-
-SMALLEST_W_INC = 2.5
-
-programs = dict(
-    five=pd.read_csv(StringIO(csv_program_5)),
-    three=pd.read_csv(StringIO(csv_program_3)),
-    one=pd.read_csv(StringIO(csv_program_1)),
-    off=pd.read_csv(StringIO(csv_program_off)),
-)
-programs[5] = programs["five"]
-programs[3] = programs["three"]
-programs[1] = programs["one"]
-programs[0] = programs["off"]
-programs["5"] = programs["five"]
-programs["3"] = programs["three"]
-programs["1"] = programs["one"]
-programs["0"] = programs["off"]
-
-
-comments = dict(
-    squat="rack @ 17, safetybar @ 3",
-    military="rack @ 16, dips @ 9",
-)
-
-assistance = dict(
-    bench="dips / chins",
-    squat="one-leg-squat / ab-wheel",
-    military="dips / chins",
-    deadlift="ham raise / leg raise",
-)
-
-
-to_add_pr_cycle = dict(
-    deadlift=5,
-    squat=5,
-    bench=2.5,
-    military=2.5,
-)
+comments = config["comments"]
+assistance = config["assistance"]
+to_add_pr_cycle = config["to_add_pr_cycle"]
 
 
 import os

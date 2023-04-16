@@ -1,3 +1,15 @@
+"""
+This module provides functionality for interacting with the database that stores athletes, lifts, and worksets.
+
+It provides functions to add and update data, as well as fetch information about the athletes and their workout progress.
+
+The module includes the following classes:
+    - Athlete
+    - Workset
+    - Table
+
+"""
+
 import pandas as pd
 from mysql.connector import connect, Error
 from . import _credentials
@@ -5,6 +17,7 @@ from contextlib import contextmanager
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
+# SQL table creation queries
 CREATE_LIFT = """CREATE TABLE lift (
   name varchar(31) NOT NULL PRIMARY KEY,
 );"""
@@ -25,7 +38,7 @@ CREATE_WORKSET = """CREATE TABLE workset (
   athlete_name varchar(31),
   date date,
   is_max boolean,
-	UNIQUE KEY `uc_set` (`lift_name`, `athlete_name`, `date`),
+  UNIQUE KEY `uc_set` (`lift_name`, `athlete_name`, `date`),
   KEY lift_name_idx (lift_name),
   KEY athlete_name_idx (athlete_name)
 );"""
@@ -34,43 +47,62 @@ CREATE_WORKSET = """CREATE TABLE workset (
 @contextmanager
 def db_connection():
     """
+    Context manager for database connection.
+
+    This function returns a context manager that can be used to manage connections to the database.
+    It yields the connection object and takes care of closing the connection when exiting the context.
+
     Examples:
 
-      with db_connection() ass conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM lift;")
-        result = cursor.fetchall()
-        for row in result:
-          print(row)
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM lift;")
+            result = cursor.fetchall()
+            for row in result:
+                print(row)
 
-      with db_connection() ass conn:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO lift (name) VALUES ('curl');")
-        conn.commit()
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO lift (name) VALUES ('curl');")
+            conn.commit()
     """
     try:
         with connect(**_credentials) as connection:
             yield connection
     except Error as e:
-        #        print(e)
         raise
 
 
 class Table:
+    """
+    Base class for the Athlete and Workset classes.
+
+    This class provides common functionality for working with tables in the database.
+    """
 
     CREATE = ""
     __tablename__ = ""
 
     @classmethod
     def create(cls):
+        """
+        Create the table in the database.
+
+        This method creates a table in the database using the CREATE statement defined in the class.
+        """
         with db_connection() as conn:
             cursor = conn.cursor()
-            # delete everything
             cursor.execute(cls.CREATE)
             conn.commit()
 
     @staticmethod
     def _execute(sql):
+        """
+        Execute a SQL query.
+
+        Args:
+            sql (str): The SQL query to execute.
+        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
@@ -78,7 +110,15 @@ class Table:
 
     @staticmethod
     def _fetchall(sql):
-        """fetch as records"""
+        """
+        Fetch all records from a SQL query.
+
+        Args:
+            sql (str): The SQL query to execute.
+
+        Returns:
+            list[dict]: A list of records returned by the query.
+        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
@@ -89,7 +129,15 @@ class Table:
 
     @staticmethod
     def _fetchone(sql):
-        """fetch as records"""
+        """
+        Fetch one record from a SQL query.
+
+        Args:
+            sql (str): The SQL query to execute.
+
+        Returns:
+            dict: A dictionary representing the record returned by the query.
+        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
@@ -98,6 +146,11 @@ class Table:
 
 
 class Athlete(Table):
+    """
+    Class representing an athlete in the database.
+
+    This class provides methods for adding an athlete to the database, setting their password, and fetching their worksets.
+    """
 
     __tablename__ = "athlete"
 
@@ -107,10 +160,41 @@ class Athlete(Table):
     );"""
 
     def __init__(self, name, password=None):
+        """
+        Initialize an Athlete object.
+
+        Args:
+            name (str): The name of the athlete.
+            password (str, optional): The athlete's password. Defaults to None.
+        """
         self.name = name
         self.password = password
+        self.worksets = []
+        self._load_worksets()
+        self.pwd_hash = self._get_login()
+
+    def _get_login(self):
+        """
+        Get the user details for a given athlete.
+
+        Args:
+            athlete (str): The name of the athlete.
+
+        Returns:
+            tuple: A tuple containing the name and hashed password of the athlete.
+        """
+        query = f"""
+            SELECT password from athlete
+            where name='{self.name}'
+        """
+        return self._fetchone(query)["password"]
 
     def add(self):
+        """
+        Add the athlete to the database.
+
+        This method inserts the athlete's name and password into the athlete table.
+        """
         insert_athlete = f"""
     INSERT INTO athlete
     (name)
@@ -120,7 +204,12 @@ class Athlete(Table):
         self._set_password(self.password)
 
     def _set_password(self, pwd):
+        """
+        Set the athlete's password in the database.
 
+        Args:
+            pwd (str): The athlete's password.
+        """
         hsh = generate_password_hash(pwd)
         change = f"""
             UPDATE {self.__tablename__}
@@ -130,14 +219,61 @@ class Athlete(Table):
         self._execute(change)
 
     def worksets_to_do(self):
+        """
+        Fetch the athlete's worksets that have not yet been completed.
 
-        query = f"""SELECT * FROM workset
-        where athlete_name='{self.name}'
-        and date IS NULL"""
-        return self._fetchall(query)
+        Returns:
+            list[dict]: A list of worksets that have not yet been completed by the athlete.
+        """
+        return [ws for ws in self.worksets if ws["date"] is None]
+
+    def latest_max(self, lift):
+        """
+        Get the latest max workset for a given lift and athlete.
+
+        Args:
+            lift (str): The name of the lift, e.g., "deadlift", "bench", "military", "squat".
+            athlete (str): The name of the athlete.
+
+        Returns:
+            dict: A dictionary representing the latest max workset.
+        """
+        max_lifts = filter(lambda ws: ws["is_max"] and ws["lift_name"]==lift, self.worksets )
+        try:
+            return max(max_lifts, key=lambda ws: ws["date"])
+        except ValueError:
+            return {}
+
+
+    def latest_cycle(self):
+        """
+        Get the latest cycle for a given athlete.
+
+        Args:
+            athlete (str): The name of the athlete.
+
+        Returns:
+            dict: A dictionary with keys cycle, base_reps, and base_max.
+        """
+
+        lifts = filter(lambda ws: ws["cycle"], self.worksets )
+        lifts = filter(lambda ws: ws["date"], lifts )
+        try:
+            return max(lifts, key=lambda ws: ws["date"])
+        except ValueError:
+            return {}
+
+
+    def _load_worksets(self):
+        self.worksets = self._fetchall(f"SELECT * FROM workset where athlete_name='{self.name}'")
 
 
 class Workset(Table):
+    """
+    Class representing a workset in the database.
+
+    This class provides methods for adding and updating worksets in the database.
+    """
 
     __tablename__ = "workset"
 
@@ -169,6 +305,20 @@ class Workset(Table):
         is_max=False,
         reps=None,
     ):
+        """
+        Initialize a Workset object.
+
+        Args:
+            base_max (float): The base maximum weight for the workset.
+            base_reps (int): The base number of repetitions for the workset.
+            cycle (int): The cycle number for the workset.
+            weight (float): The weight for the workset.
+            lift_name (str): The name of the lift for the workset.
+            athlete_name (str): The name of the athlete performing the workset.
+            date (date, optional): The date of the workset. Defaults to None.
+            is_max (bool, optional): Whether the workset is a max attempt. Defaults to False.
+            reps (int, optional): The number of repetitions for the workset. Defaults to None.
+        """
         self.wsid = None
         self.base_max = base_max
         self.base_reps = base_reps
@@ -182,11 +332,24 @@ class Workset(Table):
 
     @staticmethod
     def fetch(wsid):
+        """
+        Fetch a workset from the database by its ID.
 
+        Args:
+            wsid (int): The ID of the workset.
+
+        Returns:
+            dict: A dictionary representing the workset.
+        """
         record = Workset._fetchone(f"select * from workset where id={wsid}")
         return record
 
     def add(self):
+        """
+        Add the workset to the database.
+
+        This method inserts the workset's data into the workset table.
+        """
         insert_workset = f"""
     INSERT INTO workset
     (lift_name, athlete_name, weight, base_max, base_reps, cycle, date, is_max, reps)
@@ -196,7 +359,16 @@ class Workset(Table):
 
     @staticmethod
     def update_row(wsid, date, lift_name, reps, weight):
-        """update key-value pairs - keys must be in columns!"""
+        """
+        Update a row in the workset table.
+
+        Args:
+            wsid (int): The ID of the workset to update.
+            date (date): The new date for the workset.
+            lift_name (str): The new lift name for the workset.
+            reps (int, optional): The new number of repetitions for the workset. Defaults to None.
+            weight (float, optional): The new weight for the workset. Defaults to None.
+        """
         change = f"""
             UPDATE workset
             SET date = '{date}', lift_name = '{lift_name}', reps = {reps if reps else "NULL"}, weight = {weight if weight else "NULL"}
@@ -205,130 +377,26 @@ class Workset(Table):
             "''", "NULL"
         )
         Workset._execute(change)
+    
+    @staticmethod
+    def all():
+        return Workset._fetchall("SELECT * FROM workset")
+
+    @classmethod
+    def delete_by_id(cls, ws_id):
+        """
+        Delete a row in the workset table.
+
+        Args:
+            ws_id (int): The row ID for the workset table.
+        """
+        cls._execute(f"delete from workset where id={ws_id}")
 
 
-def all_sets(athlete=None):
-    """return all rows in the workset table
-
-    Args:
-        athlete (str): optional name of athlete
-
-    Returns:
-        list[dict] : rows in workset table as records
-    """
-    if athlete:
-        show_table_query = f"SELECT * FROM workset where athlete_name='{athlete}'"
-    else:
-        show_table_query = f"SELECT * FROM workset"
-
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(show_table_query)
-        # Fetch rows from last executed query
-        return [
-            {key: val for key, val in zip(cursor.column_names, record)}
-            for record in cursor.fetchall()
-        ]
 
 
-def delete_workset_by_id(ws_id):
-    """delete a row in the workset table
-
-    Args:
-        ws_id (int): row id for the workset table
-    """
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        # delete everything
-        cursor.execute(f"delete from workset where id={ws_id}")
-        conn.commit()
 
 
-def insert_record(lift, athlete, weight, base_max, base_reps, cycle, is_max="false"):
-    """
-    lift (str): in ["deadlift", "bench", "military", "squat"]
-    athlete (str): name of athlete
-    weight (float):
-    base_max (float):
-    base_reps (int):
-    cycle (int):
-    is_max (bool=False):
-    """
-
-    insert_workset = f"""
-  INSERT INTO workset
-  (lift_name, athlete_name, weight, base_max, base_reps, cycle, is_max)
-  VALUES ( '{lift}', '{athlete}', {weight}, {base_max}, {base_reps}, {cycle}, {is_max})
-  """
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        # add csv records instead
-        cursor.execute(insert_workset)
-        conn.commit()
 
 
-def latest_max(lift, athlete):
-    """
-    lift (str): in ["deadlift", "bench", "military", "squat"]
-    athlete (str): name of athlete
 
-    Returns:
-        list[dict] : [{'weight': 32.5, 'reps': 5, 'date': datetime.date(2023, 3, 6), 'athlete_name': 'camilla', 'lift_name': 'bench'}]
-    """
-
-    query = f"""SELECT weight, reps, date, athlete_name, lift_name FROM workset
-    where athlete_name='{athlete}' and
-    lift_name='{lift}' and is_max
-    order by date desc limit 1"""
-
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        return {key: val for key, val in zip(cursor.column_names, cursor.fetchone())}
-
-
-def latest_cycle(athlete):
-    """
-    athlete (str): name of athlete
-
-    Returns:
-        dict : with keys cycle, base_reps and base_max
-    """
-
-    query = f"""SELECT cycle, base_reps, base_max FROM workset
-    where athlete_name='{athlete}'
-    and cycle IS NOT NULL
-    order by date desc limit 1"""
-
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        return {key: val for key, val in zip(cursor.column_names, cursor.fetchone())}
-
-
-def set_password(athlete, pwd):
-    change = f"""
-        UPDATE athlete
-        SET password='{generate_password_hash(pwd)}'
-        where name='{athlete}'
-    """
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(change)
-        conn.commit()
-
-
-def get_user(athlete):
-    """
-    Returns:
-        str, str : name, hashed-password
-    """
-
-    query = f"""
-        SELECT name, password from athlete
-        where name='{athlete}'
-    """
-    with db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        return cursor.fetchone()

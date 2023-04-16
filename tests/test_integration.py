@@ -4,6 +4,7 @@ import fivethirtyone_db
 from fivethirtyone_db import db, analysis, blog
 
 
+
 def test_connection(capsys):
 
     with capsys.disabled():
@@ -16,13 +17,13 @@ def test_connection(capsys):
 def test_worksets_fetch():
     """get all lifts"""
 
-    records = db.all_sets()
+    records = db.Workset.all()
 
 
-def test_get_user(capsys):
+def test_Athlete(capsys):
     """get all lifts"""
 
-    user = db.get_user("camilla")
+    user = db.Athlete("camilla")
 
     with capsys.disabled():
         print("- " * 50)
@@ -54,3 +55,5 @@ def test_blog_make_pdf(capsys):
         print(program)
 
     # (athlete, lift, train_max, program, cycle=cycle)
+
+

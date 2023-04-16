@@ -173,7 +173,7 @@
         <th scope="col">Date</th>
         <th scope="col">Lift</th>
         <th scope="col">reps</th>
-        <th scope="col">target</th>
+        <th scope="col">stage/cycle</th>
         <th scope="col">weight</th>
         <th scope="col"></th>
       </tr>
@@ -184,7 +184,7 @@
         <td>{{ lift.date or "" }}</td>
         <td>{{ lift.lift_name }}</td>
         <td>{{ lift.reps or "" }}</td>
-        <td><span style="color:grey">{{ lift.base_reps or "" }}</span></td>
+        <td><span style="color:grey">{{ lift.base_reps or "" }}/{{ lift.cycle }}</span></td>
         <td>{{ lift.weight }}</td>
         <td>
           <a class="text-success" data-bs-toggle="modal" data-bs-target="#modal-{{lift.id}}">

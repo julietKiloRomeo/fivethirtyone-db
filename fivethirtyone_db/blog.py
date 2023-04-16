@@ -37,8 +37,9 @@ bp = Blueprint("blog", __name__)
 def index():
 
     way_in_the_future = datetime.date(2100, 1, 1)
+    athlete = db.Athlete(name=g.user)
     lifts = sorted(
-        db.all_sets(athlete=g.user),
+        athlete.worksets,
         key=lambda lift: lift["date"] or way_in_the_future,
         reverse=True,
     )
@@ -46,9 +47,6 @@ def index():
     #    {'id': 321, 'weight': 27.5, 'reps': 5, 'lift_name': 'bench', 'athlete_name': 'camilla', 'date': datetime.date(2022, 11, 8), 'is_max': 1, 'base_max': None, 'base_reps': None, 'cycle': None},
     #    {'id': 321, 'weight': 27.5, 'reps': 5, 'lift_name': 'bench', 'athlete_name': 'camilla', 'date': datetime.date(2022, 11, 8), 'is_max': 1, 'base_max': None, 'base_reps': None, 'cycle': None}
     # ]
-    for lift in lifts:
-        lift["rep_str"] = lift["reps"] or f"({lift['base_reps']}+)"
-
     next_cycle = estimate_next_cycle(g.user)
 
     return render_template("blog/index.html", lifts=lifts, next_cycle=next_cycle)
@@ -57,8 +55,8 @@ def index():
 @bp.route("/graphs")
 @login_required
 def graphs():
-
-    completed_lifts = filter(lambda d: d["date"], db.all_sets(athlete=g.user))
+    athlete = db.Athlete(name=g.user)
+    completed_lifts = filter(lambda d: d["date"], athlete.worksets)
 
     def new_plotly_js_trace(lift):
         return [
@@ -97,15 +95,14 @@ def graphs():
 @login_required
 def new_workset():
     new_set = dict(request.form)
-    db.insert_record(
-        lift=new_set["lift"],
-        athlete=g.user,
-        weight=new_set["weight"],
+    db.Workset(
         base_max="null",
         base_reps="null",
         cycle="null",
-        is_max="false"
-    )
+        weight=new_set["weight"],
+        lift_name=new_set["lift"],
+        athlete_name=g.user
+    ).add()
 
     return redirect(request.referrer)
 
@@ -121,7 +118,7 @@ def workset(wsid):
     updates = dict(request.form)
 
     if updates["send"] == "delete":
-        db.delete_workset_by_id(updates["wsid"])
+        db.Workset.delete_by_id(updates["wsid"])
         return redirect(request.referrer)
 
     db.Workset.update_row(
@@ -140,8 +137,8 @@ def workset(wsid):
 def make_pdf():
     name = g.user
 
-    worksets_to_do = db.Athlete(name).worksets_to_do()
-
+    athlete = db.Athlete(name)
+    worksets_to_do = athlete.worksets_to_do()
     # each workset is:
     # {'id': 379, 'weight': 35.0, 'reps': None, 'lift_name': 'squat', 'athlete_name': 'camilla', 'date': None, 'is_max': None,
     # 'base_max': 44.7921, 'base_reps': 3, 'cycle': 0}
@@ -155,6 +152,7 @@ def make_pdf():
         name=name,
         worksets_to_do=program,
         cycle=worksets_to_do[0]["cycle"],
+        base_reps=worksets_to_do[0]["base_reps"],
     )
 
     with tempfile.NamedTemporaryFile() as f:
@@ -200,8 +198,15 @@ def add_cycle():
         new_cycle = dict(request.form)
         athlete = g.user
 
-        for record in next_lifts(new_cycle, athlete):
-            db.insert_record(*record)
+        for lift, athlete, weight, one_rm_max, base_reps, cycle in next_lifts(new_cycle, athlete):
+            db.Workset(
+                base_max=one_rm_max,
+                base_reps=base_reps,
+                cycle=cycle,
+                weight=weight,
+                lift_name=lift,
+                athlete_name=athlete,
+            ).add()
 
     return redirect(request.referrer)
 
@@ -231,16 +236,17 @@ def next_lifts(new_cycle, athlete):
 def estimate_next_cycle(athlete):
     """add a new cycle for an athlete"""
 
-    latest_workset = db.latest_cycle(athlete)
+    athlete = db.Athlete(athlete)
+    latest_workset = athlete.latest_cycle()
 
-    latest_max_set = {lift: db.latest_max(lift, athlete) for lift in LIFTS}
+    latest_max_set = {lift: athlete.latest_max(lift) for lift in LIFTS}
     latest_max_1rm = {
         lift: analysis.one_rm_fusion(ws["weight"], ws["reps"])
         for lift, ws in latest_max_set.items()
     }
 
-    current_cycle = latest_workset["cycle"]
-    current_base_reps = latest_workset["base_reps"]
+    current_cycle = latest_workset.get("cycle", -1)
+    current_base_reps = latest_workset.get("base_reps", 0)
 
     next_cycle = current_cycle + INCREMENTS[current_base_reps]["cycle_increment"]
     next_base_reps = INCREMENTS[current_base_reps]["next_base_reps"]

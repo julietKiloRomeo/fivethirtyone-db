@@ -25,10 +25,10 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         error = None
-        _, pw_hash = db.get_user(username)
+        athlete = db.Athlete(username)
 
-        if not check_password_hash(pw_hash, password):
-            error = f"Incorrect password. {pw_hash} {password}"
+        if not check_password_hash(athlete.pwd_hash, password):
+            error = f"Incorrect password."
 
         if error is None:
             session.clear()
@@ -56,7 +56,7 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = db.get_user(user_id)[0]
+        g.user = user_id
 
 
 @bp.route("/logout")

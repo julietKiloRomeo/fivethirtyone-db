@@ -1,0 +1,65 @@
+programs:
+  five:
+    - pct: 40
+      reps: 5
+    - pct: 50
+      reps: 5
+    - pct: 60
+      reps: 3
+    - pct: 65
+      reps: 5
+    - pct: 75
+      reps: 5
+    - pct: 85
+      reps: 5+
+  three:
+    - pct: 40
+      reps: 5
+    - pct: 50
+      reps: 5
+    - pct: 60
+      reps: 3
+    - pct: 70
+      reps: 3
+    - pct: 80
+      reps: 3
+    - pct: 90
+      reps: 3+
+  one:
+    - pct: 40
+      reps: 5
+    - pct: 50
+      reps: 5
+    - pct: 60
+      reps: 3
+    - pct: 75
+      reps: 5
+    - pct: 85
+      reps: 3
+    - pct: 95
+      reps: 1+
+  off:
+    - pct: 40
+      reps: 5
+    - pct: 50
+      reps: 5
+    - pct: 40
+      reps: 5
+
+comments:
+  squat: "rack @ 17, safetybar @ 3"
+  military: "rack @ 16, dips @ 9"
+
+assistance:
+  bench: "dips / chins"
+  squat: "one-leg-squat / ab-wheel"
+  military: "dips / chins"
+  deadlift: "ham raise / leg raise"
+
+to_add_pr_cycle:
+  deadlift: 5
+  squat: 5
+  bench: 2.5
+  military: 2.5
+
+smallest_w_inc: 2.5

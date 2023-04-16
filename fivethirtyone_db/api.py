@@ -10,8 +10,8 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 @bp.route("/lifts/<lift_name>")
 @login_required
 def get_lift(lift_name):
-
-    lifts = list(db.all_sets(athlete=g.user))
+    athlete = db.Athlete(name=g.user)
+    lifts = [lift for lift in athlete.worksets]
     for lift in lifts:
         lift["rep_str"] = lift["reps"] or f"({lift['base_reps']}+)"
 

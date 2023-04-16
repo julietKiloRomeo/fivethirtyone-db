@@ -24,7 +24,9 @@ def cli():
     help="show raw record",
 )
 def list(athlete, raw):
-    for record in db.all_sets(athlete=athlete):
+    athlete = db.Athlete(name=athlete)
+
+    for record in athlete.worksets:
         if raw:
             print(record)
             continue
@@ -41,91 +43,13 @@ def list(athlete, raw):
 @cli.command(name="delete", help="delete a specific workset from DB")
 @click.option("--id", required=True)
 def delete_workset_by_id(id):
-    db.delete_workset_by_id(id)
-
-
-@cli.command(name="add", help="insert new workset in DB")
-@click.option(
-    "--lift",
-    required=True,
-    prompt=True,
-    type=click.Choice(["bench", "military", "squat", "deadlift"], case_sensitive=False),
-)
-@click.option(
-    "--athlete",
-    required=True,
-    prompt=True,
-    type=click.Choice(["camilla", "irfan", "jimmy", "christina"], case_sensitive=False),
-)
-@click.option(
-    "--date", type=click.DateTime(formats=["%Y-%m-%d"]), default=str(date.today())
-)
-@click.option("--reps", required=True, prompt=True, type=int)
-@click.option("--weight", required=True, prompt=True, type=float)
-@click.option(
-    "--max",
-    is_flag=True,
-    show_default=True,
-    default=False,
-    help="mark as a max attempt",
-)
-def insert_record(lift, athlete, date, reps, weight, max):
-    insert_workset = f"""
-  INSERT INTO workset
-  (lift_name, athlete_name, date, reps, weight, is_max)
-  VALUES ( '{lift}', '{athlete}', '{date}', {reps}, {weight}, {max})
-  """
-
-    print(
-        f"""
-  {athlete} {lift} : {reps} x {weight}
-  """
-    )
-
-    with db.db_connection() as conn:
-        cursor = conn.cursor()
-        # add csv records instead
-        cursor.execute(insert_workset)
-        conn.commit()
+    db.Workset.delete_by_id(id)
 
 
 @cli.command(name="test")
 def test():
 
     print("hello!")
-
-
-@cli.command(name="add-cycle", help="add a new cycle for an athlete")
-@click.option(
-    "--athlete",
-    required=True,
-    prompt=True,
-    type=click.Choice(["camilla", "irfan", "jimmy", "christina"], case_sensitive=False),
-)
-@click.option("--cycle", "-c", type=int)
-@click.option("--rep-base", "-B", type=click.Choice(["five", "three", "one", "off"]))
-def add_cycle(athlete, cycle, rep_base):
-    """add a new cycle for an athlete"""
-    get_latest_cycle = cycle is None
-    if get_latest_cycle:
-        latest = db.latest_cycle(athlete).get("cycle", None)
-        if latest:
-            cycle = latest + 1
-            print(
-                f"incrementing cycle from {latest} to {cycle} (use --cycle n to override)"
-            )
-
-    LIFTS = ["military", "deadlift", "bench", "squat"]
-    program = fivethirtyone_db.programs[rep_base]
-
-    for lift in LIFTS:
-        repmax = db.latest_max(lift, athlete)
-        one_rm_max = analysis.one_rm_fusion(repmax["weight"], repmax["reps"])
-        train_max = 0.9 * one_rm_max
-        to_lift = analysis.compile(athlete, lift, train_max, program, cycle=0)
-        base_reps = to_lift[4]["reps"]
-        weight = to_lift[5]["weight"]
-        db.insert_record(lift, athlete, weight, one_rm_max, base_reps, cycle)
 
 
 @cli.command(name="add-reps")
@@ -159,7 +83,7 @@ def add_reps(athlete, lift):
 @click.option("--athlete", required=True)
 @click.option("--password", required=True)
 def set_pwd(athlete, password):
-    db.set_password(athlete, password)
+    db.Athlete(athlete).set_password(password)
 
 
 @cli.command(name="check-pwd", help="set password for user")
@@ -168,9 +92,9 @@ def set_pwd(athlete, password):
 def check_pwd(athlete, password):
     from werkzeug.security import check_password_hash, generate_password_hash
 
-    _, hsh = db.get_user(athlete)
+    athlete = db.Athlete(athlete)
 
-    if check_password_hash(hsh, password):
+    if check_password_hash(athlete.pwd_hsh, password):
         print("OK")
     else:
         print("NO!")
