@@ -23,5 +23,6 @@ def lock(session):
 def tests(session):
     session.install(*"-r requirements.txt".split())
     session.install(*". --no-deps".split())
+    session.install("pytest", "pytest-sugar")
 
     session.run("pytest", *session.posargs)

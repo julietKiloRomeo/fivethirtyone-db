@@ -230,6 +230,7 @@ def next_lifts(new_cycle, athlete):
         one_rm_max = float(new_cycle[lift + "-max"])
         train_max = 0.9 * one_rm_max
         to_lift = analysis.compile(athlete, lift, train_max, program, cycle=cycle)
-        weight = to_lift[5]["weight"]
+        *_, last_set = to_lift.columns
+        weight = to_lift[last_set]["weight"]
         yield (lift, athlete, weight, one_rm_max, base_reps, cycle)
 
