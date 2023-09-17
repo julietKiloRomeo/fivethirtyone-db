@@ -123,6 +123,11 @@
               </select>
             </div>
             <div class="col-auto">
+              <input type="checkbox" class="form-check-input" name="is_max" {% if lift.is_max %}checked{% endif %}>
+              <label for="is_max">Is Max</label>
+            </div>
+                  
+            <div class="col-auto">
               <input type="number" class="form-control" placeholder="repetitions" value="{{lift.reps}}" name="reps">
             </div>
             <div class="col-auto">
@@ -182,7 +187,7 @@
       {% for lift in lifts %}
       <tr class="{{ "table-warning" if lift.is_max else "" }}">
         <td>{{ lift.date or "" }}</td>
-        <td>{{ lift.lift_name }}</td>
+        <td class="{{ 'fw-bold' if lift.is_max else '' }}">{{ lift.lift_name }}</td>
         <td>{{ lift.reps or "" }}</td>
         <td><span style="color:grey">{{ lift.base_reps or "" }}/{{ lift.cycle }}</span></td>
         <td>{{ lift.weight }}</td>

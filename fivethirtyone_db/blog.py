@@ -129,6 +129,7 @@ def workset(wsid):
         lift_name=updates["lift"],
         reps=updates["reps"],
         weight=updates["weight"],
+        is_max=updates.get("is_max", "") == "on",
     )
     # reload cached worksets
     reload_session()

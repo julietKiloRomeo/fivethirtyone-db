@@ -411,7 +411,7 @@ class Workset(Table):
             self._execute(insert_finished_workset)
 
     @staticmethod
-    def update_row(wsid, date, lift_name, reps, weight):
+    def update_row(wsid, date, lift_name, reps, weight, is_max):
         """
         Update a row in the workset table.
 
@@ -421,10 +421,11 @@ class Workset(Table):
             lift_name (str): The new lift name for the workset.
             reps (int, optional): The new number of repetitions for the workset. Defaults to None.
             weight (float, optional): The new weight for the workset. Defaults to None.
+            is_max (bool)
         """
         change = f"""
             UPDATE workset
-            SET date = '{date}', lift_name = '{lift_name}', reps = {reps if reps else "NULL"}, weight = {weight if weight else "NULL"}
+            SET date = '{date}', lift_name = '{lift_name}', reps = {reps if reps else "NULL"}, weight = {weight if weight else "NULL"}, is_max = {is_max}
             where id={wsid}
         """.replace(
             "''", "NULL"

@@ -235,6 +235,11 @@
               </select>
             </div>
             <div class="col-auto">
+              <input type="checkbox" class="form-control" name="is_max" {% if lift.is_max %}checked{% endif %}>
+              <label for="is_max">Is Max</label>
+          </div>
+          
+            <div class="col-auto">
               <input type="number" class="form-control" placeholder="repetitions" value="{{lift.reps}}" name="reps">
             </div>
             <div class="col-auto">

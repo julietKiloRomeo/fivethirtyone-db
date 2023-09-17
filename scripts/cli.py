@@ -83,7 +83,7 @@ def add_reps(athlete, lift):
 @click.option("--athlete", required=True)
 @click.option("--password", required=True)
 def set_pwd(athlete, password):
-    db.Athlete(athlete).set_password(password)
+    db.Athlete(athlete)._set_password(password)
 
 
 @cli.command(name="check-pwd", help="set password for user")
