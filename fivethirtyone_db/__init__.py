@@ -3,12 +3,15 @@ from io import StringIO
 import os
 import pathlib
 import yaml
+from flask import Flask, g
+
 
 def load_config(filename):
     with open(filename, "r") as file:
         return yaml.safe_load(file)
 
-config = load_config(pathlib.Path(__file__).parent.parent / "program-config.yaml")
+config_path = os.environ.get("PROGRAM_CONFIG", pathlib.Path(__file__).parent.parent / "program-config.yaml")
+config = load_config(config_path)
 
 SMALLEST_W_INC = config["smallest_w_inc"]
 
@@ -21,8 +24,6 @@ assistance = config["assistance"]
 to_add_pr_cycle = config["to_add_pr_cycle"]
 
 
-import os
-from flask import Flask, g
 
 try:
     with pathlib.Path("vars.yaml").open("r") as f:

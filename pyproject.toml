@@ -24,6 +24,7 @@ flask = "^2.2.3"
 pyyaml = "^6.0"
 gunicorn = "^20.1.0"
 xhtml2pdf = "^0.2.9"
+plotly = "^5.18.0"
 
 [tool.poetry.group.dev.dependencies]
 jupyterlab = "*"

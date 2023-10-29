@@ -25,4 +25,4 @@ def tests(session):
     session.install(*". --no-deps".split())
     session.install("pytest", "pytest-sugar")
 
-    session.run("pytest", *session.posargs)
+    session.run("pytest", *session.posargs, env={"PROGRAM_CONFIG":str(pathlib.Path(__file__).parent / "program-config.yaml")})

@@ -17,6 +17,7 @@ from . import db, analysis, programs, config
 import datetime
 from xhtml2pdf import pisa
 import tempfile
+import plotly.express as px
 
 
 
@@ -57,35 +58,65 @@ def reload_session():
 def graphs():
     athlete = g.user
     completed_lifts = filter(lambda d: d["date"], athlete.worksets)
+    completed_lifts = sorted(completed_lifts, key=lambda d: d['date'])
 
-    def new_plotly_js_trace(lift):
+
+    def new_plotly_js_trace(lift, color):
+        legend_group = lift
         return [
+            dict(
+                x=[],
+                y=[],
+                type="scatter",
+                mode="lines",
+                line={"shape": "hvh", "width": 3, "color": color},
+                name=f"{lift} (line)",
+                legendgroup=legend_group,
+                showlegend=False,
+            ),
             dict(
                 x=[],
                 y=[],
                 text=[],
                 type="scatter",
-                mode="lines+markers",
-                line={"shape": "hvh", "width": 3},
-                marker={"size": 10},
+                mode="markers",
+                marker={
+                    "size": 12, 
+                    "color": 'white',  # Set face color to white
+                    "line": {'width': 4, 'color': color}  # Set edge color to the cycle color
+                },
                 name=lift,
                 hovertemplate="""
-<b>%{x}</b><br><br>
-%{text}""",
-            )
+    <b>%{x}</b><br><br>
+    %{text}""",
+                legendgroup=legend_group,
+                showlegend=True,
+            ),
         ]
 
-    data = {lift: new_plotly_js_trace(lift) for lift in config["lifts"]}
+
+    # Get the default Plotly color cycle
+    color_cycle = px.colors.qualitative.Plotly
+    data = {lift: new_plotly_js_trace(lift, color) for lift, color in zip(config["lifts"], color_cycle)}
 
     for record in completed_lifts:
-        # add x and y data
         w, r = record["weight"], record["reps"]
         w_1rm = analysis.one_rm_fusion(record["weight"], record["reps"])
         txt = f"{r} x {w} kg → {w_1rm:.1f} kg"
-        plot_to_expand = data[record["lift_name"]][0]
-        plot_to_expand["x"].append(f"{record['date']}")
-        plot_to_expand["y"].append(w_1rm)
-        plot_to_expand["text"].append(txt)
+        
+        line_trace, marker_trace = data[record["lift_name"]]
+        
+        # Add data to marker trace
+        marker_trace["x"].append(f"{record['date']}")
+        marker_trace["y"].append(w_1rm)
+        marker_trace["text"].append(txt)
+        
+        # Add data to line trace with filtering
+        last_valid_value = next((y for y in reversed(line_trace["y"]) if y is not None), None)
+        if last_valid_value is None or w_1rm >= 0.8 * last_valid_value:
+            line_trace["x"].append(f"{record['date']}")
+            line_trace["y"].append(w_1rm)
+
 
     return render_template("blog/graphs.html", data=data)
 
