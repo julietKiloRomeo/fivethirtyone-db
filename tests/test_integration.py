@@ -1,7 +1,7 @@
 import pandas as pd
 import fivethirtyone_db
 
-from fivethirtyone_db import db, analysis, blog
+from fivethirtyone_db import analysis, blog, db
 
 
 
@@ -17,7 +17,7 @@ def test_connection(capsys):
 def test_worksets_fetch():
     """get all lifts"""
 
-    records = db.Workset.all()
+    records = db.Workset.list()
 
 
 def test_Athlete(capsys):

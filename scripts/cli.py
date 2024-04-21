@@ -1,8 +1,6 @@
 #!/usr/bin/python
-import fivethirtyone_db
-from fivethirtyone_db import db, analysis
+from fivethirtyone_db import db
 import click
-from datetime import date
 import json
 import datetime
 import pathlib
@@ -108,29 +106,7 @@ def default(o):
 @cli.command(name="export", help="dump db to records")
 def export():
 
-    with db.db_connection() as conn:
-        cursor = conn.cursor()
-
-        # Getting all the table names
-        cursor.execute("SHOW TABLES;")
-        table_names = [tname for tname, in cursor.fetchall()]
-
-        for tname in table_names:
-            sql = f"select * from {tname}"
-            cursor.execute(sql)
-            records = [
-                {key: val for key, val in zip(cursor.column_names, record)}
-                for record in cursor.fetchall()
-            ]
-
-            with open(f"{tname}.json", "w") as f:
-                json.dump(records, f, default=default)
-
-
-@cli.command(name="export", help="dump db to records")
-def export():
-
-    export_folder = pathlib.Path("db-dump")
+    export_folder = pathlib.Path("db-dump") / f"{datetime.date.today()}"
     export_folder.mkdir(exist_ok=True)
 
     with db.db_connection() as conn:
@@ -153,9 +129,11 @@ def export():
 
 
 @cli.command(name="import", help="init db from records")
-def import_records():
-    export_folder = pathlib.Path("db-dump")
-    export_folder.mkdir(exist_ok=True)
+@click.option("--backupdate", required=True)
+def import_records(backupdate):
+
+    # first load all data
+    export_folder = pathlib.Path("db-dump") / backupdate
 
     to_insert = {}
     for pth in export_folder.glob("*.json"):
@@ -163,23 +141,31 @@ def import_records():
         with pth.open("r") as f:
             to_insert[table_name] = json.load(f)
 
+    # now delete all db rows and insert the new ones
     with db.db_connection() as conn:
         cursor = conn.cursor()
 
         for table_name, records in to_insert.items():
+            if not records:
+                continue  # Skip if there are no records to insert for this table
+            
+            col_names = ", ".join(records[0].keys())
+            placeholders = ", ".join("?" * len(records[0]))  # Use '?' for each column value
 
-            col_names = ", ".join([col for col in records[0]])
-            fmts = ", ".join([f"%({col})s" for col in records[0]])
-            # delete everything
-            cursor.execute(f"delete from {table_name}")
+            # delete everything from the table
+            cursor.execute(f"DELETE FROM {table_name}")
             conn.commit()
-            # add records instead
-            sql = f"""
-            INSERT INTO {table_name} ({col_names})
-            VALUES ({fmts})
-            """
-            cursor.executemany(sql, records)
+
+            # prepare the SQL statement for inserting new records
+            sql = f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders})"
+            
+            # convert each dictionary to a tuple of values
+            values = [tuple(record[col] for col in record) for record in records]
+            
+            # execute the SQL command to insert all records
+            cursor.executemany(sql, values)
             conn.commit()
+
 
 
 if __name__ == "__main__":

@@ -29,3 +29,8 @@ To run with production DB and gunicorn do:
 DBHOST=eu-central.connect.psdb.cloud DBUSERNAME=xxx DBPASSWORD=xxx DATABASE=hobby-app-data gunicorn --bind 0.0.0.0:5000 -w 2 wsgi:app
 ```
 look in vars.env for credentials
+
+The production DB is hosted on [planetscale](https://planetscale.com/).
+
+
+

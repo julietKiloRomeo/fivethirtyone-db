@@ -5,6 +5,7 @@ import pathlib
 import yaml
 from flask import Flask, g
 
+DB_FILE = pathlib.Path(__file__).parent / "531.sqlite"
 
 def load_config(filename):
     with open(filename, "r") as file:

@@ -13,13 +13,11 @@ from flask import (
 from werkzeug.exceptions import abort
 
 from .auth import login_required
-from . import db, analysis, programs, config
+from . import analysis, db, programs, config
 import datetime
 from xhtml2pdf import pisa
 import tempfile
 import plotly.express as px
-
-
 
 
 bp = Blueprint("blog", __name__)

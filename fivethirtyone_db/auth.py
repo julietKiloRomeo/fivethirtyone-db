@@ -60,7 +60,17 @@ def load_logged_in_user():
 
     for ws in user_dict.get("worksets"):
         date_str = ws["date"]
-        ws["date"] = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z').date() if date_str else None
+        if date_str is None:
+            continue
+        
+        mysql_format = '%a, %d %b %Y %H:%M:%S %Z'
+        sqlite_format = "%Y-%m-%d"
+        if ":" in date_str:
+            format_to_use = mysql_format
+        else:
+            format_to_use = sqlite_format
+
+        ws["date"] = datetime.strptime(date_str, format_to_use).date() if date_str else None
 
     g.user = db.Athlete.from_dict(user_dict)
 

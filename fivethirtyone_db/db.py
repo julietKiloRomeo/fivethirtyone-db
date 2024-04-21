@@ -10,99 +10,53 @@ The module includes the following classes:
 
 """
 
-import pandas as pd
-from mysql.connector import connect, Error
-from . import _credentials, config, analysis
+import sqlite3
 from contextlib import contextmanager
-from werkzeug.security import check_password_hash, generate_password_hash
-
-
-# SQL table creation queries
-CREATE_LIFT = """CREATE TABLE lift (
-  name varchar(31) NOT NULL PRIMARY KEY,
-);"""
-
-CREATE_ATHLETE = """CREATE TABLE athlete (
-  name varchar(31) NOT NULL PRIMARY KEY,
-  password varchar(120),
-);"""
-
-CREATE_WORKSET = """CREATE TABLE workset (
-  id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  base_max float,
-  base_reps int,
-  cycle int,
-  weight float,
-  reps int,
-  lift_name varchar(31),
-  athlete_name varchar(31),
-  date date,
-  is_max boolean,
-  UNIQUE KEY `uc_set` (`lift_name`, `athlete_name`, `date`),
-  KEY lift_name_idx (lift_name),
-  KEY athlete_name_idx (athlete_name)
-);"""
+from werkzeug.security import generate_password_hash
+from . import DB_FILE, config, analysis
 
 
 @contextmanager
 def db_connection():
     """
     Context manager for database connection.
-
-    This function returns a context manager that can be used to manage connections to the database.
-    It yields the connection object and takes care of closing the connection when exiting the context.
-
-    Examples:
-
-        with db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM lift;")
-            result = cursor.fetchall()
-            for row in result:
-                print(row)
-
-        with db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO lift (name) VALUES ('curl');")
-            conn.commit()
     """
     try:
-        with connect(**_credentials) as connection:
-            yield connection
-    except Error as e:
-        raise
+        connection = sqlite3.connect(DB_FILE)
+        connection.row_factory = sqlite3.Row  # This allows us to access columns by name
+        yield connection
+    finally:
+        connection.close()
 
+
+def create_database():
+    """
+    Create a SQLite database and initialize tables.
+    """
+    Lift.create()
+    Athlete.create()
+    Workset.create()
+        
 
 class Table:
     """
     Base class for the Athlete and Workset classes.
-
-    This class provides common functionality for working with tables in the database.
     """
-
-    CREATE = ""
     __tablename__ = ""
 
     @classmethod
     def create(cls):
-        """
-        Create the table in the database.
-
-        This method creates a table in the database using the CREATE statement defined in the class.
-        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(cls.CREATE)
             conn.commit()
 
+    @classmethod
+    def list(cls):
+        return [dict(row) for row in cls._fetchall(f"SELECT * FROM {cls.__tablename__}")]
+
     @staticmethod
     def _execute(sql):
-        """
-        Execute a SQL query.
-
-        Args:
-            sql (str): The SQL query to execute.
-        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
@@ -110,80 +64,71 @@ class Table:
 
     @staticmethod
     def _fetchall(sql):
-        """
-        Fetch all records from a SQL query.
-
-        Args:
-            sql (str): The SQL query to execute.
-
-        Returns:
-            list[dict]: A list of records returned by the query.
-        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
-            return [
-                {key: val for key, val in zip(cursor.column_names, record)}
-                for record in cursor.fetchall()
-            ]
+            return cursor.fetchall()
 
     @staticmethod
     def _fetchone(sql):
-        """
-        Fetch one record from a SQL query.
-
-        Args:
-            sql (str): The SQL query to execute.
-
-        Returns:
-            dict: A dictionary representing the record returned by the query.
-        """
         with db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
-            record = cursor.fetchone()
-            return {key: val for key, val in zip(cursor.column_names, record)}
+            return cursor.fetchone()
+
+
+class Lift(Table):
+    __tablename__ = "lift"
+    CREATE = """
+CREATE TABLE IF NOT EXISTS lift (
+  name TEXT NOT NULL PRIMARY KEY
+);"""
+
+    def __init__(self, name):
+        self.name = name
+
+    def add(self):
+        insert_lift = f"INSERT INTO lift (name) VALUES ('{self.name}')"
+        self._execute(insert_lift)
 
 
 class Athlete(Table):
-    """
-    Class representing an athlete in the database.
-
-    This class provides methods for adding an athlete to the database, setting their password, and fetching their worksets.
-    """
-
     __tablename__ = "athlete"
+    CREATE = """
+CREATE TABLE IF NOT EXISTS athlete (
+  name TEXT NOT NULL PRIMARY KEY,
+  password TEXT
+);"""
 
-    CREATE = """CREATE TABLE athlete (
-    name varchar(31) NOT NULL PRIMARY KEY,
-    password varchar(120),
-    );"""
 
     def __init__(self, name, worksets=None):
-        """
-        Initialize an Athlete object.
-
-        Args:
-            name (str): The name of the athlete.
-            password (str, optional): The athlete's password. Defaults to None.
-        """
         self.name = name
+        self.worksets = worksets if worksets is not None else self._load_worksets()
 
-        if worksets is None:
-            self._load_worksets()
-        else:
-            self.worksets = worksets
-    
     def to_dict(self):
         return {
             "name":self.name,
             "worksets":self.worksets,
         }
+
     @classmethod
     def from_dict(cls, record):
         if record is None:
             return None
         return cls(**record)
+
+    def _load_worksets(self):
+        return [ dict(ws) for ws in self._fetchall(f"SELECT * FROM workset WHERE athlete_name='{self.name}'")]
+
+    def add(self, password):
+        insert_athlete = f"INSERT INTO athlete (name) VALUES ('{self.name}')"
+        self._execute(insert_athlete)
+        self._set_password(password)
+
+    def _set_password(self, pwd):
+        hsh = generate_password_hash(pwd)
+        change = f"UPDATE {self.__tablename__} SET password='{hsh}' WHERE name='{self.name}'"
+        self._execute(change)
 
     @staticmethod
     def _get_login(name):
@@ -202,40 +147,6 @@ class Athlete(Table):
         """
         return Athlete._fetchone(query)["password"]
 
-
-    def _load_worksets(self):
-        print("RELOADING!")
-        self.worksets = self._fetchall(f"SELECT * FROM workset where athlete_name='{self.name}'")
-
-
-    def add(self, password):
-        """
-        Add the athlete to the database.
-
-        This method inserts the athlete's name and password into the athlete table.
-        """
-        insert_athlete = f"""
-    INSERT INTO athlete
-    (name)
-    VALUES ( '{self.name}')
-    """
-        self._execute(insert_athlete)
-        self._set_password(password)
-
-    def _set_password(self, pwd):
-        """
-        Set the athlete's password in the database.
-
-        Args:
-            pwd (str): The athlete's password.
-        """
-        hsh = generate_password_hash(pwd)
-        change = f"""
-            UPDATE {self.__tablename__}
-            SET password='{hsh}'
-            where name='{self.name}'
-        """
-        self._execute(change)
 
     def worksets_to_do(self):
         """
@@ -310,58 +221,25 @@ class Athlete(Table):
         )
 
 
+
 class Workset(Table):
-    """
-    Class representing a workset in the database.
-
-    This class provides methods for adding and updating worksets in the database.
-    """
-
     __tablename__ = "workset"
+    CREATE = """
+CREATE TABLE IF NOT EXISTS workset (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  base_max REAL,
+  base_reps INTEGER,
+  cycle INTEGER,
+  weight REAL,
+  reps INTEGER,
+  lift_name TEXT,
+  athlete_name TEXT,
+  date TEXT,
+  is_max BOOLEAN,
+  UNIQUE (lift_name, athlete_name, date)
+);"""
 
-    CREATE = """CREATE TABLE workset (
-    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    base_max float,
-    base_reps int,
-    cycle int,
-    weight float,
-    reps int,
-    lift_name varchar(31),
-    athlete_name varchar(31),
-    date date,
-    is_max boolean,
-        UNIQUE KEY `uc_set` (`lift_name`, `athlete_name`, `date`),
-    KEY lift_name_idx (lift_name),
-    KEY athlete_name_idx (athlete_name)
-    );"""
-
-    def __init__(
-        self,
-        base_max,
-        base_reps,
-        cycle,
-        weight,
-        lift_name,
-        athlete_name,
-        date=None,
-        is_max=False,
-        reps=None,
-    ):
-        """
-        Initialize a Workset object.
-
-        Args:
-            base_max (float): The base maximum weight for the workset.
-            base_reps (int): The base number of repetitions for the workset.
-            cycle (int): The cycle number for the workset.
-            weight (float): The weight for the workset.
-            lift_name (str): The name of the lift for the workset.
-            athlete_name (str): The name of the athlete performing the workset.
-            date (date, optional): The date of the workset. Defaults to None.
-            is_max (bool, optional): Whether the workset is a max attempt. Defaults to False.
-            reps (int, optional): The number of repetitions for the workset. Defaults to None.
-        """
-        self.wsid = None
+    def __init__(self, base_max, base_reps, cycle, weight, lift_name, athlete_name, date=None, is_max=False, reps=None):
         self.base_max = base_max
         self.base_reps = base_reps
         self.cycle = cycle
@@ -372,43 +250,14 @@ class Workset(Table):
         self.is_max = is_max
         self.reps = reps
 
-    @staticmethod
-    def fetch(wsid):
-        """
-        Fetch a workset from the database by its ID.
-
-        Args:
-            wsid (int): The ID of the workset.
-
-        Returns:
-            dict: A dictionary representing the workset.
-        """
-        record = Workset._fetchone(f"select * from workset where id={wsid}")
-        return record
-
     def add(self):
+        insert_query = f"""
+            INSERT INTO workset
+            (lift_name, athlete_name, weight, base_max, base_reps, cycle, date, is_max, reps)
+            VALUES ('{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, '{self.date}', {self.is_max}, {self.reps})
         """
-        Add the workset to the database.
+        self._execute(insert_query)
 
-        This method inserts the workset's data into the workset table.
-        """
-        insert_finished_workset = f"""
-    INSERT INTO workset
-    (lift_name, athlete_name, weight, base_max, base_reps, cycle, date, is_max, reps)
-    VALUES ( '{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, {self.date}, {self.is_max}, {self.reps})
-    """
-        insert_planned_workset = f"""
-    INSERT INTO workset
-    (lift_name, athlete_name, weight, base_max, base_reps, cycle, is_max)
-    VALUES ( '{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, {self.is_max})
-    """
-        is_planned = self.date is None
-
-        if is_planned:
-            print(insert_planned_workset)
-            self._execute(insert_planned_workset)
-        else:
-            self._execute(insert_finished_workset)
 
     @staticmethod
     def update_row(wsid, date, lift_name, reps, weight, is_max):
@@ -432,9 +281,6 @@ class Workset(Table):
         )
         Workset._execute(change)
     
-    @staticmethod
-    def all():
-        return Workset._fetchall("SELECT * FROM workset")
 
     @classmethod
     def delete_by_id(cls, ws_id):
@@ -445,12 +291,3 @@ class Workset(Table):
             ws_id (int): The row ID for the workset table.
         """
         cls._execute(f"delete from workset where id={ws_id}")
-
-
-
-
-
-
-
-
-
