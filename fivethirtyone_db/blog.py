@@ -26,7 +26,7 @@ bp = Blueprint("blog", __name__)
 @bp.route("/")
 @login_required
 def index():
-
+    reload_session()
     way_in_the_future = datetime.date(2100, 1, 1)
     athlete = g.user
     lifts = sorted(
