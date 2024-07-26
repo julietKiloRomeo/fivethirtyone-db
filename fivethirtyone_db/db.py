@@ -251,10 +251,14 @@ CREATE TABLE IF NOT EXISTS workset (
         self.reps = reps
 
     def add(self):
+        # Handle None values correctly
+        date_value = 'NULL' if self.date is None else f"'{self.date}'"
+        reps_value = 'NULL' if self.reps is None else str(self.reps)
+
         insert_query = f"""
             INSERT INTO workset
             (lift_name, athlete_name, weight, base_max, base_reps, cycle, date, is_max, reps)
-            VALUES ('{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, '{self.date}', {self.is_max}, {self.reps})
+            VALUES ('{self.lift_name}', '{self.athlete_name}', {self.weight}, {self.base_max}, {self.base_reps}, {self.cycle}, {date_value}, {self.is_max}, {reps_value})
         """
         self._execute(insert_query)
 
